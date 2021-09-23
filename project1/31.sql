@@ -1,0 +1,1 @@
+select P.name from Pokemon as P where P.id in (select CatchedPokemon.pid from CatchedPokemon join Trainer on Trainer.id = CatchedPokemon.owner_id where Trainer.hometown = 'Sangnok City') and P.id in (select CatchedPokemon.pid from CatchedPokemon join Trainer on Trainer.id = CatchedPokemon.owner_id where Trainer.hometown = 'Blue City');

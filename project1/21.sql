@@ -1,0 +1,1 @@
+select t.name from Trainer as t where t.id in (select distinct Trainer.id from Trainer join CatchedPokemon as cp1 on Trainer.id = cp1.owner_id join CatchedPokemon as cp2 on Trainer.id = cp2.owner_id where cp1.pid = cp2.pid and cp1.id != cp2.id) order by t.name;

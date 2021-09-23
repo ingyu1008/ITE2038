@@ -1,0 +1,1 @@
+select Trainer.name from Trainer join CatchedPokemon on Trainer.id = CatchedPokemon.owner_id join Pokemon on Pokemon.id = CatchedPokemon.pid where Pokemon.type = 'Psychic' group by Trainer.id order by Trainer.name;

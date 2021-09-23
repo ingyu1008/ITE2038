@@ -1,0 +1,1 @@
+select c.name from City as c join Trainer as t on c.name = t.hometown group by c.name having count(*) >= all(select count(*) as cnt from City join Trainer on City.name = Trainer.hometown group by City.name);

@@ -1,0 +1,1 @@
+select CatchedPokemon.nickname from CatchedPokemon join Trainer on Trainer.id = CatchedPokemon.owner_id where Trainer.id in (select Trainer.id from Trainer join Gym on Trainer.id = Gym.leader_id where Gym.city = 'Sangnok City') and CatchedPokemon.pid in (select Pokemon.id from Pokemon where Pokemon.type = 'Water') order by CatchedPokemon.nickname;

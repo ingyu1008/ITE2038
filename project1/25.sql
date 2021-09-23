@@ -1,0 +1,1 @@
+select p.name from Pokemon as p where p.id in (select p2.id from Pokemon as p1, Pokemon as p2, Evolution as e where p1.id = e.before_id and p2.id = e.after_id and p1.id not in (select Evolution.after_id from Evolution));

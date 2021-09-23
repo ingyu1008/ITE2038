@@ -1,0 +1,1 @@
+select Trainer.name, avg(CatchedPokemon.level) from Trainer join Gym on Trainer.id = Gym.leader_id join CatchedPokemon on Trainer.id = CatchedPokemon.owner_id group by Trainer.id order by Trainer.name;
