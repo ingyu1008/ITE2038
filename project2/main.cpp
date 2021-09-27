@@ -9,15 +9,16 @@ int main(int argc, char const *argv[])
         return 1;
     }
 
-    file_open_database_file(const_cast<char *>(argv[1]));
+    int fd = file_open_database_file(argv[1]);
 
     while (true)
     {
+        std::cout << "Now Reading Header Page" << std::endl;
         header_page_t header;
-        file_read_header(&header);
+        file_read_page(fd, 0, &header);
         std::cout << "================================================" << std::endl;
         std::cout << "This Part Is Written for Testing Purpose" << std::endl;
-        std::cout << "Entire File Size = " << File.size() << std::endl;
+        std::cout << "Entire File Size = " << FileIO::size(fd) << std::endl;
         std::cout << "Number of Pages = " << header.get_num_pages() << std::endl;
         std::cout << "Next Free Page Number = " << header.get_free_page_number() << std::endl;
         std::cout << "================================================" << std::endl;
@@ -35,17 +36,19 @@ int main(int argc, char const *argv[])
             break;
         else if (input == "a")
         {
-            pagenum_t page = file_alloc_page();
+            pagenum_t page = file_alloc_page(fd);
             std::cout << "[INFO]: allocated page " << page << std::endl;
         }
         else if (input == "f")
         {
             ss >> input;
             pagenum_t page = std::stoll(input);
-            file_free_page(page);
+            file_free_page(fd, page);
             std::cout << "[INFO]: freed page " << page << std::endl;
         }
     }
+
+    file_close_database_file();
 
     return 0;
 }
