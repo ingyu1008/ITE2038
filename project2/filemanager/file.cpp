@@ -108,7 +108,7 @@ namespace FileIO
 
     int open(const char *filename)
     {
-        int fd = ::open(filename, O_RDWR | O_CREAT | O_SYNC);
+        int fd = ::open(filename, O_RDWR | O_CREAT | O_SYNC, 0644);
         std::cout << "[INFO]: open(" << filename << ")" << std::endl;
         opened_files.push_back(fd);
         return fd;
@@ -155,11 +155,8 @@ int file_open_database_file(const char *path)
             FileIO::write(fd, &free_page, PAGE_SIZE, pagenum * PAGE_SIZE);
         }
         header.set_num_pages(INITIAL_FREE_PAGES + 1);
-        std::cout << "starting to write header file.." << std::endl;
         FileIO::write(fd, &header, PAGE_SIZE, 0);
-        std::cout << "finished writing header file" << std::endl;
         FileIO::read(fd, &header, PAGE_SIZE, 0);
-        std::cout << "saved header file's number of pages = " << header.get_num_pages() << std::endl;
     }
 
     return fd;
