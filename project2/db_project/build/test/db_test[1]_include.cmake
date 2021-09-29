@@ -1,0 +1,5 @@
+if(EXISTS "/mnt/c/users/ingyu/documents/gitlab/데이터베이스시스템및응용/project2/db_project/build/test/db_test[1]_tests.cmake")
+  include("/mnt/c/users/ingyu/documents/gitlab/데이터베이스시스템및응용/project2/db_project/build/test/db_test[1]_tests.cmake")
+else()
+  add_test(db_test_NOT_BUILT db_test_NOT_BUILT)
+endif()

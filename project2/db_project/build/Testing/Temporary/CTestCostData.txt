@@ -1,0 +1,14 @@
+FileManager.FileInitializationTest 29 0.00827703
+FileManager.SimpleAllocFree 13 0.0120318
+FileManager.PageManagement2 2 0.432909
+FileManager.PageIO 32 0.00355956
+FactorialTest.HandlesZeroInput 17 0.00689376
+FactorialTest.HandlesPositiveInput 17 0.00358774
+PrimeTest.HandlesOneInput 17 0.00396354
+PrimeTest.HandlesPositiveInput 17 0.00360138
+VectorTest.HasSameContent 17 0.00468551
+IntVectorTest.HasSameContent 17 0.00880795
+IntVectorTest.IsNotEmptyInitialily 17 0.00657258
+FileManager.DoublePagaeSizeCheck 7 0.129727
+FileManager.AdvancedAllocation 1 0.593115
+---
