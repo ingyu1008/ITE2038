@@ -6,7 +6,7 @@
 #include <iostream>
 #include <vector>
 
-const int INITIAL_SIZE = 1048576; // 10 MiB
+const int INITIAL_SIZE = 10485760; // 10 MiB
 const int PAGE_SIZE = 4096;
 const int INITIAL_FREE_PAGES = (INITIAL_SIZE / PAGE_SIZE) - 1;
 
