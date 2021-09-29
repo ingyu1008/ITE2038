@@ -1,3 +1,0 @@
-/mnt/c/users/ingyu/documents/gitlab/데이터베이스시스템및응용/project2/db_project/build/_deps/googletest-subbuild/CMakeFiles/rebuild_cache.dir
-/mnt/c/users/ingyu/documents/gitlab/데이터베이스시스템및응용/project2/db_project/build/_deps/googletest-subbuild/CMakeFiles/edit_cache.dir
-/mnt/c/users/ingyu/documents/gitlab/데이터베이스시스템및응용/project2/db_project/build/_deps/googletest-subbuild/CMakeFiles/googletest-populate.dir
