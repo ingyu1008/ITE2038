@@ -30,34 +30,6 @@ void page_t::set_data(const T src, uint64_t offset) {
     std::memcpy(data + offset, &src, sizeof(T));
 }
 
-// header_page_t::header_page_t() {};
-// pagenum_t header_page_t::get_free_page_number() const {
-//     pagenum_t free_page_number;
-//     memcpy(&free_page_number, data + HEADER_FREE_OFFSET, sizeof(pagenum_t));
-//     return free_page_number;
-// };
-// uint64_t header_page_t::get_num_pages() const {
-//     uint64_t num_pages;
-//     memcpy(&num_pages, data + HEADER_NUMPAGE_OFFSET, sizeof(uint64_t));
-//     return num_pages;
-// }
-// void header_page_t::set_free_page_number(pagenum_t free_page_number) {
-//     memcpy(data + HEADER_FREE_OFFSET, &free_page_number, sizeof(pagenum_t));
-// }
-// void header_page_t::set_num_pages(uint64_t num_pages) {
-//     memcpy(data + HEADER_NUMPAGE_OFFSET, &num_pages, sizeof(uint64_t));
-// }
-
-// free_page_t::free_page_t() {};
-// pagenum_t free_page_t::get_next_free_page_number() const {
-//     pagenum_t next_free_page_number;
-//     memcpy(&next_free_page_number, data + FREE_FREE_OFFSET, sizeof(pagenum_t));
-//     return next_free_page_number;
-// }
-// void free_page_t::set_next_free_page_number(pagenum_t next_free_page_number) {
-//     memcpy(data + FREE_FREE_OFFSET, &next_free_page_number, sizeof(pagenum_t));
-// }
-
 pagenum_t PageIO::HeaderPage::get_free_page_number(page_t* page) {
     return page->get_data<pagenum_t>(HEADER_FREE_OFFSET);
 }
@@ -94,8 +66,8 @@ off_t FileIO::size(int fd)
 }
 void FileIO::write(int fd, const void* src, int n, int offset)
 {
-    // std::cout << "[INFO]: write(" << fd << "," << n << "," << offset << ")" << std::endl;
     pwrite(fd, src, n, offset);
+    sync();
 }
 void FileIO::read(int fd, void* dst, int n, int offset)
 {
@@ -194,6 +166,3 @@ void file_close_database_file()
     }
     FileIO::opened_files.clear();
 }
-
-// void file_read_header(page_t *header) { file_read_page(0, header); }
-// void file_write_header(const page_t *header) { file_write_page(0, header); }F

@@ -34,33 +34,6 @@ public:
     void set_data(const T src, uint64_t offset);
 };
 
-// class header_page_t : public page_t
-// {
-// public:
-//     header_page_t();
-
-//     // getters
-//     pagenum_t get_free_page_number() const;
-//     uint64_t get_num_pages() const;
-
-//     // setters
-//     void set_free_page_number(pagenum_t free_page_number);
-//     void set_num_pages(uint64_t num_pages);
-// };
-
-
-// class free_page_t : public page_t
-// {
-// public:
-//     free_page_t();
-
-//     // getters
-//     pagenum_t get_next_free_page_number() const;
-
-//     // setters
-//     void set_next_free_page_number(pagenum_t next_free_page_number);
-// };
-
 namespace PageIO {
     namespace HeaderPage {
         pagenum_t get_free_page_number(page_t* page);
@@ -101,8 +74,5 @@ void file_write_page(int fd, pagenum_t pagenum, const page_t* src);
 
 // Stop referencing the database file
 void file_close_database_file();
-
-// void file_read_header(page_t *header);
-// void file_write_header(const page_t *header);
 
 #endif // __FILE_H__
