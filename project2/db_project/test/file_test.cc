@@ -33,23 +33,23 @@ TEST(FileManager, SimpleAllocFree)
     page_t header;
 
     file_read_page(fd, 0, &header);
-    pagenum_t firstnum = PageIO::HeaderPage::get_free_page_number(&header);
+    pagenum_t firstnum = PageIO::HeaderPage::get_free_pagenum(&header);
     pagenum_t first = file_alloc_page(fd);
     EXPECT_EQ(first, firstnum);
 
     file_read_page(fd, 0, &header);
-    pagenum_t secondnum = PageIO::HeaderPage::get_free_page_number(&header);
+    pagenum_t secondnum = PageIO::HeaderPage::get_free_pagenum(&header);
     pagenum_t second = file_alloc_page(fd);
     EXPECT_EQ(second, secondnum);
 
     file_read_page(fd, 0, &header);
-    EXPECT_NE(second, PageIO::HeaderPage::get_free_page_number(&header));
+    EXPECT_NE(second, PageIO::HeaderPage::get_free_pagenum(&header));
 
     file_free_page(fd, first);
     file_read_page(fd, 0, &header);
     page_t page;
     bool flag = false;
-    for (pagenum_t i = PageIO::HeaderPage::get_free_page_number(&header); i != 0; i = PageIO::FreePage::get_next_free_page_number(&page))
+    for (pagenum_t i = PageIO::HeaderPage::get_free_pagenum(&header); i != 0; i = PageIO::FreePage::get_next_free_pagenum(&page))
     {
         file_read_page(fd, i, &page);
         EXPECT_NE(i, second);

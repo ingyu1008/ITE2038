@@ -1,53 +1,5 @@
 #include "file.h"
-
-template<class T>
-void page_t::offsetCheck(uint64_t offset) {
-    if (offset + sizeof(T) > PAGE_SIZE) {
-        std::cout << "[ERROR]: Invalid Offset at get_data()" << std::endl;
-        throw std::invalid_argument("Offset is out of range.");
-    }
-}
-
-page_t::page_t() { std::fill_n(data, PAGE_SIZE, '\0'); };
-
-template<class T>
-T page_t::get_data(uint64_t offset) {
-    offsetCheck<T>(offset);
-    T ret;
-    std::memcpy(&ret, data + offset, sizeof(T));
-    return ret;
-}
-
-template<class T>
-void page_t::get_data(T* dest, uint64_t offset) {
-    offsetCheck<T>(offset);
-    std::memcpy(dest, data + offset, sizeof(T));
-}
-
-template<class T>
-void page_t::set_data(const T src, uint64_t offset) {
-    offsetCheck<T>(offset);
-    std::memcpy(data + offset, &src, sizeof(T));
-}
-
-pagenum_t PageIO::HeaderPage::get_free_page_number(page_t* page) {
-    return page->get_data<pagenum_t>(HEADER_FREE_OFFSET);
-}
-uint64_t PageIO::HeaderPage::get_num_pages(page_t* page) {
-    return page->get_data<uint64_t>(HEADER_NUMPAGE_OFFSET);
-}
-void PageIO::HeaderPage::set_free_page_number(page_t* page, pagenum_t free_page_number) {
-    page->set_data(free_page_number, HEADER_FREE_OFFSET);
-}
-void PageIO::HeaderPage::set_num_pages(page_t* page, uint64_t num_pages) {
-    page->set_data(num_pages, HEADER_NUMPAGE_OFFSET);
-}
-pagenum_t PageIO::FreePage::get_next_free_page_number(page_t* page) {
-    return page->get_data<pagenum_t>(FREE_FREE_OFFSET);
-}
-void PageIO::FreePage::set_next_free_page_number(page_t* page, pagenum_t next_free_page_number) {
-    page->set_data(next_free_page_number, FREE_FREE_OFFSET);
-}
+#include "page.h"
 
 std::vector<int> FileIO::opened_files;
 int FileIO::open(const char* filename)
@@ -89,11 +41,11 @@ int file_open_database_file(const char* path)
         for (pagenum_t pagenum = INITIAL_FREE_PAGES; pagenum > 0; pagenum--)
         {
             page_t free_page;
-            PageIO::FreePage::set_next_free_page_number(&free_page, pagenum - 1);
+            PageIO::FreePage::set_next_free_pagenum(&free_page, pagenum - 1);
             FileIO::write(fd, &free_page, PAGE_SIZE, pagenum * PAGE_SIZE);
         }
         PageIO::HeaderPage::set_num_pages(&header, INITIAL_FREE_PAGES + 1);
-        PageIO::HeaderPage::set_free_page_number(&header, INITIAL_FREE_PAGES);
+        PageIO::HeaderPage::set_free_pagenum(&header, INITIAL_FREE_PAGES);
         FileIO::write(fd, &header, PAGE_SIZE, 0);
     }
 
@@ -106,28 +58,33 @@ pagenum_t file_alloc_page(int fd)
     page_t header_page;
     FileIO::read(fd, &header_page, PAGE_SIZE, 0);
 
-    pagenum_t free_page_number = PageIO::HeaderPage::get_free_page_number(&header_page);
-    if (free_page_number == 0)
+    pagenum_t free_pagenum = PageIO::HeaderPage::get_free_pagenum(&header_page);
+    if (free_pagenum == 0)
     {
         pagenum_t next_num = PageIO::HeaderPage::get_num_pages(&header_page);
         pagenum_t next_size = next_num * 2;
         while (next_num < next_size)
         {
             page_t free_page;
-            PageIO::FreePage::set_next_free_page_number(&free_page, free_page_number);
-            free_page_number = next_num;
+            PageIO::FreePage::set_next_free_pagenum(&free_page, free_pagenum);
+            free_pagenum = next_num;
             FileIO::write(fd, &free_page, PAGE_SIZE, next_num * PAGE_SIZE);
             next_num++;
         }
-        PageIO::HeaderPage::set_free_page_number(&header_page, free_page_number);
+        PageIO::HeaderPage::set_free_pagenum(&header_page, free_pagenum);
         PageIO::HeaderPage::set_num_pages(&header_page, next_size);
     }
     page_t free_page;
-    FileIO::read(fd, &free_page, PAGE_SIZE, free_page_number * PAGE_SIZE);
+    FileIO::read(fd, &free_page, PAGE_SIZE, free_pagenum * PAGE_SIZE);
 
-    PageIO::HeaderPage::set_free_page_number(&header_page, PageIO::FreePage::get_next_free_page_number(&free_page));
+    PageIO::HeaderPage::set_free_pagenum(&header_page, PageIO::FreePage::get_next_free_pagenum(&free_page));
     FileIO::write(fd, &header_page, PAGE_SIZE, 0);
-    return free_page_number;
+
+    // std::cout << "[DEBUG] Allocated " << free_pagenum << std::endl;
+    // FileIO::read(fd, &header_page, PAGE_SIZE, 0);
+    // std::cout << "[DEBUG] Saved next free " << PageIO::HeaderPage::get_free_pagenum(&header_page) << std::endl;
+
+    return free_pagenum;
 }
 
 // Free an on-disk page to the free page list
@@ -138,10 +95,10 @@ void file_free_page(int fd, pagenum_t pagenum)
     FileIO::read(fd, &header_page, PAGE_SIZE, 0);
 
     page_t free_page;
-    PageIO::FreePage::set_next_free_page_number(&free_page, PageIO::HeaderPage::get_free_page_number(&header_page));
+    PageIO::FreePage::set_next_free_pagenum(&free_page, PageIO::HeaderPage::get_free_pagenum(&header_page));
     FileIO::write(fd, &free_page, PAGE_SIZE, pagenum * PAGE_SIZE);
 
-    PageIO::HeaderPage::set_free_page_number(&header_page, pagenum);
+    PageIO::HeaderPage::set_free_pagenum(&header_page, pagenum);
     FileIO::write(fd, &header_page, PAGE_SIZE, 0);
 }
 
@@ -154,6 +111,7 @@ void file_read_page(int fd, pagenum_t pagenum, page_t* dest)
 // Write an in-memory page(src) to the on-disk page
 void file_write_page(int fd, pagenum_t pagenum, const page_t* src)
 {
+    // std::cout << "file_write_page(" << pagenum << ")" << std::endl;
     FileIO::write(fd, src, PAGE_SIZE, pagenum * PAGE_SIZE);
 }
 
