@@ -3,27 +3,27 @@
 
 #include <gtest/gtest.h>
 
-TEST(BPlus, FindOperation) {
-    int table_id = open_table("db.txt");
+// TEST(BPlus, FindOperation) {
+//     int table_id = open_table("db.txt");
 
-    uint16_t val_size;
-    for (int i = -10; i <= 10010; i++) {
-        char ret_val[112];
-        int res = db_find(table_id, i, ret_val, &val_size);
-        if (i <= 0 || i > 10000) {
-            // std::cout << "Cannot Find " << i << std::endl;
-            EXPECT_EQ(res, 1);
-        }
-        else {
-            EXPECT_EQ(res, 0);
-            // std::cout << "Found " << i << ": ";
-            // for (int j = 0; j < val_size; j++) {
-            //     std::cout << ret_val[j];
-            // }
-            // std::cout << "\n";
-        }
-    }
-}
+//     uint16_t val_size;
+//     for (int i = -10; i <= 10010; i++) {
+//         char ret_val[112];
+//         int res = db_find(table_id, i, ret_val, &val_size);
+//         if (i <= 0 || i > 10000) {
+//             // std::cout << "Cannot Find " << i << std::endl;
+//             EXPECT_EQ(res, 1);
+//         }
+//         else {
+//             EXPECT_EQ(res, 0);
+//             // std::cout << "Found " << i << ": ";
+//             // for (int j = 0; j < val_size; j++) {
+//             //     std::cout << ret_val[j];
+//             // }
+//             // std::cout << "\n";
+//         }
+//     }
+// }
 
 TEST(BPlus, InsertOperationSmall) {
     if (std::remove("insertTest.dat") == 0)
