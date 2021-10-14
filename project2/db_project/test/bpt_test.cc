@@ -7,24 +7,23 @@
 TEST(BPlus, InsertOperationSmall) {
     if (std::remove("insertTest.dat") == 0)
     {
-        std::cout << "File 'insertTest.dat' already exists. Deleting it." << std::endl;
+        std::cout << "[INFO] File 'insertTest.dat' already exists. Deleting it." << std::endl;
     }
 
     EXPECT_EQ(init_db(), 0);
 
     int table_id = open_table("insertTest.dat");
-    std::cout << table_id << std::endl;
 
     for (int i = 1; i <= 100; i++) {
         std::string data = "01234567890123456789012345678901234567890123456789" + std::to_string(i);
         int res = db_insert(table_id, i, const_cast<char*>(data.c_str()), data.length());
         EXPECT_EQ(res, 0);
         if (res) {
-            std::cout << "Error inserting with key = " << i << std::endl;
+            std::cout << "[ERROR] Error inserting with key = " << i << std::endl;
         }
     }
 
-    std::cout << "Successfully inserted 100 records." << std::endl;
+    std::cout << "[INFO] Successfully inserted 100 records." << std::endl;
 
     int err = 0;
     uint16_t val_size;
@@ -33,22 +32,20 @@ TEST(BPlus, InsertOperationSmall) {
         int res = db_find(table_id, i, ret_val, &val_size);
         if (i <= 0 || i > 100) {
             EXPECT_EQ(res, 1);
+            err += res ^ 1;
         } else {
             EXPECT_EQ(res, 0);
-            // for (int j = 0; j < val_size; j++) {
-            //     std::cout << ret_val[j];
-            // }
-            // std::cout << "\n";
+            err += res;
         }
-        err += res;
         if (res) {
-            std::cout << "Could not find record with key = " << i << std::endl;
+            std::cout << "[INFO] Could not find record with key = " << i << std::endl;
         }
     }
     if (err) {
-        std::cout << "Something has gone wrong." << std::endl;
+        std::cout << "[FATAL] Something has gone wrong." << std::endl;
+        FAIL();
     } else {
-        std::cout << "Successfully found all 100 records." << std::endl;
+        std::cout << "[INFO] Successfully found all 100 records." << std::endl;
     }
 
     EXPECT_EQ(shutdown_db(), 0);
@@ -70,7 +67,6 @@ TEST(BPlus, DeleteOperationSmall) {
     }
 
 
-    db_print_tree(table_id);
 
     for (int i = mn; i <= n; i++) {
         EXPECT_EQ(db_find(table_id, i, buffer, &val_size), 0);
@@ -79,7 +75,6 @@ TEST(BPlus, DeleteOperationSmall) {
         for (int j = 1; j <= 100; j++) {
             EXPECT_EQ(db_find(table_id, j, buffer, &val_size), st.find(j) == st.end());
         }
-        db_print_tree(table_id);
     }
 
     EXPECT_EQ(shutdown_db(), 0);
@@ -88,7 +83,7 @@ TEST(BPlus, DeleteOperationSmall) {
 TEST(BPlus, InsertOperationLarge) {
     if (std::remove("insertTest.dat") == 0)
     {
-        std::cout << "File 'insertTest.dat' already exists. Deleting it." << std::endl;
+        std::cout << "[INFO] File 'insertTest.dat' already exists. Deleting it." << std::endl;
     }
 
     EXPECT_EQ(init_db(), 0);
@@ -96,17 +91,24 @@ TEST(BPlus, InsertOperationLarge) {
     int table_id = open_table("insertTest.dat");
 
     int n = 100000;
+    int x = 0;
 
     for (int i = 1; i <= n; i++) {
         std::string data = "01234567890123456789012345678901234567890123456789" + std::to_string(i);
         int res = db_insert(table_id, i, const_cast<char*>(data.c_str()), data.length());
         EXPECT_EQ(res, 0);
         if (res) {
-            std::cout << "Error inserting with key = " << i << std::endl;
+            std::cout << "[ERROR] Error inserting with key = " << i << std::endl;
+        } else {
+            x++;
         }
     }
 
-    std::cout << "Successfully inserted " << n << " records." << std::endl;
+    if (x == n) {
+        std::cout << "[INFO] Successfully inserted " << n << " records." << std::endl;
+    } else {
+        FAIL();
+    }
 
     int err = 0;
     uint16_t val_size;
@@ -115,18 +117,20 @@ TEST(BPlus, InsertOperationLarge) {
         int res = db_find(table_id, i, ret_val, &val_size);
         if (i <= 0 || i > n) {
             EXPECT_EQ(res, 1);
+            err += res ^ 1;
         } else {
             EXPECT_EQ(res, 0);
             err += res;
         }
         if (res) {
-            std::cout << "Could not find record with key = " << i << std::endl;
+            std::cout << "[INFO] Could not find record with key = " << i << std::endl;
         }
     }
     if (err) {
-        std::cout << "Something has gone wrong." << std::endl;
+        std::cout << "[FATAL] Something has gone wrong." << std::endl;
+        FAIL();
     } else {
-        std::cout << "Successfully found all " << n << " records." << std::endl;;
+        std::cout << "[INFO] Successfully found all " << n << " records." << std::endl;
     }
 
     EXPECT_EQ(shutdown_db(), 0);
@@ -161,11 +165,6 @@ TEST(BPlus, DeleteOperationLarge) {
                 int rnd = rand(gen);
                 EXPECT_EQ(db_find(table_id, rnd, buffer, &val_size), st.find(rnd) == st.end());
             }
-
-#ifdef DEBUG
-            db_print_tree(table_id);
-            printTotalCalls();
-#endif
         }
     }
     catch (std::invalid_argument e) {
@@ -173,7 +172,6 @@ TEST(BPlus, DeleteOperationLarge) {
         std::cout << "[FATAL] " << e.what() << std::endl;
 
         db_print_tree(table_id);
-        printCallStack();
         shutdown_db();
         FAIL();
     }
@@ -184,14 +182,15 @@ TEST(BPlus, DeleteOperationLarge) {
 TEST(BPlus, InsertOperationRandomized) {
     if (std::remove("insertTest.dat") == 0)
     {
-        std::cout << "File 'insertTest.dat' already exists. Deleting it." << std::endl;
+        std::cout << "[INFO] File 'insertTest.dat' already exists. Deleting it." << std::endl;
     }
 
     EXPECT_EQ(init_db(), 0);
 
     int table_id = open_table("insertTest.dat");
 
-    int n = 50000;
+    int n = 100000;
+    int x = 0;
 
     std::vector<int64_t> v;
     for (int64_t i = 1; i <= n; i++) {
@@ -205,11 +204,17 @@ TEST(BPlus, InsertOperationRandomized) {
         int res = db_insert(table_id, i, const_cast<char*>(data.c_str()), data.length());
         EXPECT_EQ(res, 0);
         if (res) {
-            std::cout << "Error inserting with key = " << i << std::endl;
+            std::cout << "[ERROR] Error inserting with key = " << i << std::endl;
+        } else {
+            x++;
         }
     }
 
-    std::cout << "Successfully inserted " << n << " records." << std::endl;
+    if (x == n) {
+        std::cout << "[INFO] Successfully inserted " << n << " records." << std::endl;
+    } else {
+        FAIL();
+    }
 
     int err = 0;
     uint16_t val_size;
@@ -223,15 +228,16 @@ TEST(BPlus, InsertOperationRandomized) {
             err += res;
         }
         if (res) {
-            std::cout << "Could not find record with key = " << i << std::endl;
+            std::cout << "[INFO] Could not find record with key = " << i << std::endl;
         }
     }
+
     if (err) {
-        std::cout << "Something has gone wrong." << std::endl;
+        std::cout << "[FATAL] Something has gone wrong." << std::endl;
+        FAIL();
     } else {
-        std::cout << "Successfully found all " << n << " records." << std::endl;;
+        std::cout << "[INFO] Successfully found all " << n << " records." << std::endl;;
     }
-    // db_print_tree(table_id);
     EXPECT_EQ(shutdown_db(), 0);
 }
 
@@ -242,7 +248,7 @@ TEST(BPlus, DeleteOperationRandomized) {
     char buffer[MAX_VAL_SIZE];
     uint16_t val_size;
 
-    int n = 50000;
+    int n = 100000;
 
     std::vector<int64_t> v;
     std::set<int> st;
@@ -266,18 +272,13 @@ TEST(BPlus, DeleteOperationRandomized) {
                 int rnd = rand(gen);
                 int res = db_find(table_id, rnd, buffer, &val_size);
                 EXPECT_EQ(res, st.find(rnd) == st.end());
-                if (res > (st.find(rnd) == st.end())) std::cout << "[FATAL] Could not find value " << rnd << std::endl;
             }
-            // if (i % 50 == 0) db_print_tree(table_id);
-            // printTotalCalls();
         }
     }
     catch (std::invalid_argument e) {
         std::cout << "[FATAL] Something went wrong while deleting " << j << std::endl;
         std::cout << "[FATAL] " << e.what() << std::endl;
 
-        printTotalCalls();
-        printCallStack();
         db_print_tree(table_id);
         shutdown_db();
         FAIL();

@@ -1,9 +1,9 @@
-// #define DEBUG
 #ifndef __MYBPT_H__
 #define __MYBPT_H__
 
 #include "page.h"
 #include "file.h"
+
 
 constexpr uint64_t NODE_MAX_KEYS = (PAGE_SIZE - PH_SIZE) / BRANCH_FACTOR_SIZE;
 constexpr uint16_t MAX_VAL_SIZE = 112;
@@ -40,28 +40,18 @@ pagenum_t merge_internal(int64_t table_id, pagenum_t root_pagenum, pagenum_t pag
 pagenum_t merge_leaf(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagenum, pagenum_t neighbor_pagenum, int neighbor_index, int64_t key);
 pagenum_t redistribute_internal(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagenum, pagenum_t neighbor_pagenum, int neighbor_index, int key_index, int64_t key);
 pagenum_t redistribute_leaf(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagenum, pagenum_t neighbor_pagenum, int neighbor_index, int key_index, int64_t key);
-pagenum_t delete_entry (int64_t table_id, pagenum_t root_pagenum, pagenum_t pagenum, int64_t key);
+pagenum_t delete_entry(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagenum, int64_t key);
 pagenum_t _delete(int64_t table_id, pagenum_t root_pagenum, int64_t key);
-// void destroy_tree_nodes(int64_t table_id, pagenum_t pagenum);
-// pagenum_t destroy_tree(int64_t table_id, pagenum_t root);
 
 // API
 int64_t open_table(char* pathname);
-int db_insert(int64_t table_id, int64_t key, char *value, uint16_t val_size);
-int db_find(int64_t table_id, int64_t key, char* ret_val, uint16_t *val_size);
+int db_insert(int64_t table_id, int64_t key, char* value, uint16_t val_size);
+int db_find(int64_t table_id, int64_t key, char* ret_val, uint16_t* val_size);
 int db_delete(int64_t table_id, int64_t key);
 int init_db();
 int shutdown_db();
 
-extern int remove_entry_internal;
-extern int remove_entry_leaf;
-extern int merge_int;
-extern int merge_lf;
-extern int redist_internal;
-extern int redist_leaf;
-
-void printTotalCalls();
-void printCallStack();
 void db_print_tree(int64_t table_id);
+
 
 #endif // __MYBPT_H__

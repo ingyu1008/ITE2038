@@ -9,7 +9,7 @@ TEST(FileManager, FileInitializationTest)
 {
     if (std::remove("testdb") == 0)
     {
-        std::cout << "File 'testdb' already exists. Deleting it." << std::endl;
+        std::cout << "[INFO] File 'testdb' already exists. Deleting it." << std::endl;
     }
     int fd = file_open_database_file("testdb");
     page_t header;

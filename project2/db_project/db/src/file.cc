@@ -5,7 +5,7 @@ std::vector<int> FileIO::opened_files;
 int FileIO::open(const char* filename)
 {
     int fd = ::open(filename, O_RDWR | O_CREAT | O_SYNC, 0644);
-    std::cout << "[INFO]: open(" << filename << ")" << std::endl;
+    std::cout << "[INFO] open(" << filename << ")" << std::endl;
     opened_files.push_back(fd);
     return fd;
 }

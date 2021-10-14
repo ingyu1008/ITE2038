@@ -9,7 +9,6 @@ pagenum_t find_leaf(int64_t table_id, pagenum_t root_pagenum, int64_t key) {
     pagenum_t cur = root_pagenum;
 
     if (cur == 0) {
-        std::cout << "[DEBUG] Tree is Empty" << std::endl;
         return cur;
     }
 
@@ -36,9 +35,8 @@ pagenum_t find_leaf(int64_t table_id, pagenum_t root_pagenum, int64_t key) {
 }
 
 int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, uint16_t* val_size) {
-    // std::cout << "[DEBUG] Finding k"
     pagenum_t leaf = find_leaf(table_id, root_pagenum, key);
-    // std::cout << "[DEBUG] leaf page number: " << leaf << std::endl;
+
     if (leaf == 0) return 1;
 
     page_t page;
@@ -52,7 +50,6 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
         if (slot.get_key() == key) break;
     }
     if (i == num_keys) {
-        // std::cout << "[DEBUG] Could not find given key: " << key << std::endl;
         return 1;
     } else {
         *val_size = slot.get_size();
@@ -68,7 +65,6 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
  */
 pagenum_t make_node(int64_t table_id) {
     pagenum_t pagenum = file_alloc_page(table_id);
-    // std::cout << "[DEBUG] Made node with pagenum " << pagenum << std::endl;
     page_t page;
     file_read_page(table_id, pagenum, &page);
     PageIO::BPT::set_parent_pagenum(&page, 0);
@@ -114,7 +110,6 @@ int get_left_index(int64_t table_id, pagenum_t parent_pagenum, pagenum_t left_pa
  * the new root.
  */
 pagenum_t insert_into_new_root(int64_t table_id, pagenum_t left_pagenum, int64_t key, pagenum_t right_pagenum) {
-    // std::cout << "[DEBUG] insert_into_new_root()" << std::endl;
     pagenum_t root_pagenum = make_node(table_id);
     page_t root;
     file_read_page(table_id, root_pagenum, &root);
@@ -143,8 +138,6 @@ pagenum_t insert_into_new_root(int64_t table_id, pagenum_t left_pagenum, int64_t
  * without violating the B+ tree properties.
  */
 pagenum_t insert_into_node(int64_t table_id, pagenum_t root_pagenum, pagenum_t parent_pagenum, int left_index, int64_t key, pagenum_t right_pagenum) {
-    // std::cout << "[DEBUG] insert_into_node()" << std::endl;
-
     page_t page;
     file_read_page(table_id, parent_pagenum, &page);
     int num_keys = PageIO::BPT::get_num_keys(&page);
@@ -152,8 +145,6 @@ pagenum_t insert_into_node(int64_t table_id, pagenum_t root_pagenum, pagenum_t p
 
 
     for (int i = num_keys; i > left_index; i--) {
-        // branch_factor_t branch_factor = PageIO::BPT::InternalPage::get_nth_branch_factor(&page, i - 1);
-        // PageIO::BPT::InternalPage::set_nth_branch_factor(&page, i, branch_factor);
         PageIO::BPT::InternalPage::set_nth_branch_factor(&page, i, PageIO::BPT::InternalPage::get_nth_branch_factor(&page, i - 1));
     }
 
@@ -172,8 +163,6 @@ pagenum_t insert_into_node(int64_t table_id, pagenum_t root_pagenum, pagenum_t p
  * the order, and causing the node to split into two.
  */
 pagenum_t insert_into_node_after_splitting(int64_t table_id, pagenum_t root_pagenum, pagenum_t old_node_pagenum, int left_index, int64_t key, pagenum_t right_pagenum) {
-    // std::cout << "[DEBUG] insert_into_node_after_splitting()" << std::endl;
-
     std::vector<std::pair<int64_t, pagenum_t>> branch_factors;
 
     page_t page;
@@ -191,6 +180,7 @@ pagenum_t insert_into_node_after_splitting(int64_t table_id, pagenum_t root_page
     if (branch_factors.size() != NODE_MAX_KEYS + 1) {
         // This should never happen
         std::cout << "[FATAL] node split when its not supposed to, the node size equals " << branch_factors.size() << std::endl;
+        exit(1);
     }
 
     int split = (num_keys + 1) / 2;
@@ -203,14 +193,7 @@ pagenum_t insert_into_node_after_splitting(int64_t table_id, pagenum_t root_page
         PageIO::BPT::InternalPage::set_nth_branch_factor(&page, i, branch_factor);
     }
     file_write_page(table_id, old_node_pagenum, &page);
-    // {
-    //     std::cout << "[DEBUG] Left Node Contains: ";
-    //     for (int i = 0; i < split; i++) {
-    //         std::cout << PageIO::BPT::InternalPage::get_nth_branch_factor(&page, i).get_key() << " ";
-    //     }
-    //     std::cout << std::endl;
-    //     std::cout << "[DEBUG] Left Node is_leaf: " << PageIO::BPT::get_is_leaf(&page) << std::endl;
-    // }
+
     pagenum_t par_pagenum = PageIO::BPT::get_parent_pagenum(&page);
     int64_t prop_key = branch_factors[split].first;
 
@@ -238,14 +221,6 @@ pagenum_t insert_into_node_after_splitting(int64_t table_id, pagenum_t root_page
         file_write_page(table_id, branch_factors[i].second, &child);
     }
     file_write_page(table_id, new_node_pagenum, &page);
-    // {
-    //     std::cout << "[DEBUG] Right Node Contains: ";
-    //     for (int i = 0; i < num_keys - split; i++) {
-    //         std::cout << PageIO::BPT::InternalPage::get_nth_branch_factor(&page, i).get_key() << " ";
-    //     }
-    //     std::cout << std::endl;
-    //     std::cout << "[DEBUG] Right Node is_leaf: " << PageIO::BPT::get_is_leaf(&page) << std::endl;
-    // }
 
     return insert_into_parent(table_id, root_pagenum, old_node_pagenum, prop_key, new_node_pagenum);
 }
@@ -254,8 +229,6 @@ pagenum_t insert_into_node_after_splitting(int64_t table_id, pagenum_t root_page
  * Returns the root of the tree after insertion.
  */
 pagenum_t insert_into_parent(int64_t table_id, pagenum_t root_pagenum, pagenum_t left_pagenum, int64_t key, pagenum_t right_pagenum) {
-    // std::cout << "[DEBUG] insert_into_parent()" << std::endl;
-
     page_t left;
     file_read_page(table_id, left_pagenum, &left);
     pagenum_t par_pagenum = PageIO::BPT::get_parent_pagenum(&left);
@@ -265,9 +238,6 @@ pagenum_t insert_into_parent(int64_t table_id, pagenum_t root_pagenum, pagenum_t
     }
 
     int left_index = get_left_index(table_id, par_pagenum, left_pagenum);
-    // #ifdef DEBUG
-    //     std::cout << "[DEBUG] insert_into_parent(" << par_pagenum << "," << left_pagenum << "," << ")\tleft_index = " << left_index << std::endl;
-    // #endif
 
     page_t page;
     file_read_page(table_id, par_pagenum, &page);
@@ -285,8 +255,6 @@ pagenum_t insert_into_parent(int64_t table_id, pagenum_t root_pagenum, pagenum_t
  * Returns the altered leaf.
  */
 pagenum_t insert_into_leaf(int64_t table_id, pagenum_t leaf_pagenum, int64_t key, const char* data, uint16_t size) {
-    // std::cout << "[DEBUG] insert_into_leaf()" << std::endl;
-
     page_t leaf;
     file_read_page(table_id, leaf_pagenum, &leaf);
     int num_keys = PageIO::BPT::get_num_keys(&leaf);
@@ -301,8 +269,6 @@ pagenum_t insert_into_leaf(int64_t table_id, pagenum_t leaf_pagenum, int64_t key
 
     PageIO::BPT::set_num_keys(&leaf, num_keys + 1);
     for (int i = num_keys; i > insertion_point; i--) {
-        // slot_t slot = PageIO::BPT::LeafPage::get_nth_slot(&leaf, i-1);
-        // PageIO::BPT::LeafPage::set_nth_slot(&leaf, i, slot);
         PageIO::BPT::LeafPage::set_nth_slot(&leaf, i, PageIO::BPT::LeafPage::get_nth_slot(&leaf, i - 1));
     }
 
@@ -326,13 +292,9 @@ pagenum_t insert_into_leaf(int64_t table_id, pagenum_t leaf_pagenum, int64_t key
  * in half.
  */
 pagenum_t insert_into_leaf_after_splitting(int64_t table_id, pagenum_t root_pagenum, pagenum_t leaf_pagenum, int64_t key, const char* data, uint16_t data_size) {
-    // std::cout << "[DEBUG] insert_into_leaf_after_splitting()" << std::endl;
-
     page_t left, leaf;
     file_read_page(table_id, leaf_pagenum, &left);
     file_read_page(table_id, leaf_pagenum, &leaf);
-
-    // std::cout << "[FATAL] Why is this node not leaf???????????????????" << PageIO::BPT::get_is_leaf(&leaf) << std::endl;
 
     pagenum_t right_pagenum = make_leaf(table_id);
     page_t right;
@@ -353,12 +315,6 @@ pagenum_t insert_into_leaf_after_splitting(int64_t table_id, pagenum_t root_page
     }
     keys.emplace_back(key, -1);
     std::sort(keys.begin(), keys.end());
-
-    // std::cout << "[DEBUG] keys in this node(" << leaf_pagenum << "): ";
-    // for (int i = 0; i < keys.size(); i++) {
-    //     std::cout << keys[i].first << " ";
-    // }
-    // std::cout << std::endl;
 
     // Does the left part
     uint64_t free_space = INITIAL_FREE_SPACE;
@@ -391,16 +347,6 @@ pagenum_t insert_into_leaf_after_splitting(int64_t table_id, pagenum_t root_page
         left.set_data(buffer, offset, size);
         free_space -= SLOT_SIZE + size;
     }
-    // {
-    //     std::cout << "*******************************************\n";
-    //     std::cout << "[DEBUG] Left Node Contains: ";
-    //     int num_keys = PageIO::BPT::get_num_keys(&left);
-    //     for (j = 0; j < i; j++) {
-    //         std::cout << PageIO::BPT::LeafPage::get_nth_slot(&left, j).get_key() << " ";
-    //     }
-    //     std::cout << std::endl;
-    //     std::cout << "*******************************************\n";
-    // }
 
     // Does the right part
 
@@ -430,15 +376,6 @@ pagenum_t insert_into_leaf_after_splitting(int64_t table_id, pagenum_t root_page
 
     PageIO::BPT::set_num_keys(&right, j);
     PageIO::BPT::LeafPage::set_amount_free_space(&right, free_space);
-    // {
-    //     std::cout << "[DEBUG] Right Node Contains: ";
-    //     int num_keys = PageIO::BPT::get_num_keys(&right);
-    //     for (i = 0; i < j; i++) {
-    //         std::cout << PageIO::BPT::LeafPage::get_nth_slot(&right, i).get_key() << " ";
-    //     }
-    //     std::cout << std::endl;
-    //     std::cout << "*******************************************\n";
-    // }
 
     file_write_page(table_id, right_pagenum, &right);
 
@@ -450,8 +387,6 @@ pagenum_t insert_into_leaf_after_splitting(int64_t table_id, pagenum_t root_page
  * start a new tree.
  */
 pagenum_t start_new_tree(int64_t table_id, int64_t key, const char* data, uint16_t size) {
-    std::cout << "[DEBUG] start_new_tree()" << std::endl;
-
     pagenum_t root_pagenum = make_leaf(table_id);
     page_t root;
     file_read_page(table_id, root_pagenum, &root);
@@ -504,24 +439,9 @@ pagenum_t insert(int64_t table_id, pagenum_t root_pagenum, int64_t key, const ch
     page_t leaf;
     file_read_page(table_id, leaf_pagenum, &leaf);
 
-    // std::cout << "[DEBUG] Descibing a Node containing the key(1) " << key << ": ";
-    // int num_keys = PageIO::BPT::get_num_keys(&leaf);
-    // for (int i = 0; i < num_keys; i++) {
-    //     std::cout << PageIO::BPT::LeafPage::get_nth_slot(&leaf, i).get_key() << " ";
-    // }
-    // std::cout << std::endl;
-
     if (PageIO::BPT::LeafPage::get_amount_free_space(&leaf) > SLOT_SIZE + sz) {
         leaf_pagenum = insert_into_leaf(table_id, leaf_pagenum, key, data, sz);
         file_read_page(table_id, leaf_pagenum, &leaf);
-
-        // std::cout << "[DEBUG] Descibing a Node containing the key(2) " << key << ": ";
-        // int num_keys = PageIO::BPT::get_num_keys(&leaf);
-        // for (int i = 0; i < num_keys; i++) {
-        //     std::cout << PageIO::BPT::LeafPage::get_nth_slot(&leaf, i).get_key() << " ";
-        // }
-        // std::cout << std::endl;
-
         return root_pagenum;
     }
 
@@ -532,58 +452,31 @@ pagenum_t insert(int64_t table_id, pagenum_t root_pagenum, int64_t key, const ch
 
 // Deletion
 
-std::deque<std::string> dq;
-
 int get_neighbor_index(int64_t table_id, pagenum_t pagenum) {
-    std::string s = "get_neighbor_index(" + std::to_string(table_id) + "," + std::to_string(pagenum) + ")";
-    dq.push_back(s);
+
     page_t page;
     file_read_page(table_id, pagenum, &page);
 
     pagenum_t parent_pagenum = PageIO::BPT::get_parent_pagenum(&page);
 
-    std::cout << parent_pagenum << " " << pagenum << "!!!!" << std::endl;
     page_t parent;
     file_read_page(table_id, parent_pagenum, &parent);
     if (PageIO::BPT::InternalPage::get_leftmost_pagenum(&parent) == pagenum) {
         int num_keys = PageIO::BPT::get_num_keys(&parent);
-        // #ifdef DEBUG
-        //         std::cout << "[DEBUG] " << pagenum << ": " << PageIO::BPT::InternalPage::get_leftmost_pagenum(&parent) << " ";
-        //         for (int i = 0; i < num_keys; i++) {
-        //             std::cout << PageIO::BPT::InternalPage::get_nth_branch_factor(&parent, i).get_pagenum() << " ";
-        //         }
-        //         std::cout << std::endl;
-        // #endif
-        dq.pop_back();
         return -1; // Special Case: Leftmost page
     } else {
         int num_keys = PageIO::BPT::get_num_keys(&parent);
-#ifdef DEBUG
-        std::cout << "[DEBUG] " << pagenum << ": " << PageIO::BPT::InternalPage::get_leftmost_pagenum(&parent) << " ";
-#endif
+
         for (int i = 0; i < num_keys; i++) {
-#ifdef DEBUG
-            std::cout << PageIO::BPT::InternalPage::get_nth_branch_factor(&parent, i).get_pagenum() << " ";
-#endif
             if (PageIO::BPT::InternalPage::get_nth_branch_factor(&parent, i).get_pagenum() == pagenum) {
-                dq.pop_back();
-#ifdef DEBUG
-                std::cout << std::endl;
-#endif
                 return i;
             }
         }
-
-        // #ifdef DEBUG
-        //         std::cout << std::endl;
-        // #endif
     }
     throw std::invalid_argument("Invalid Argument at get_neighbor_index()");
 }
 
 pagenum_t remove_entry_from_internal(int64_t table_id, pagenum_t internal_pagenum, int64_t key) {
-    dq.push_back(__func__);
-    remove_entry_internal++;
     page_t page;
     file_read_page(table_id, internal_pagenum, &page);
 
@@ -599,13 +492,10 @@ pagenum_t remove_entry_from_internal(int64_t table_id, pagenum_t internal_pagenu
     }
     PageIO::BPT::set_num_keys(&page, num_keys - 1);
     file_write_page(table_id, internal_pagenum, &page);
-    dq.pop_back();
     return internal_pagenum;
 }
 
 pagenum_t remove_entry_from_leaf(int64_t table_id, pagenum_t leaf_pagenum, int64_t key) {
-    dq.push_back(__func__);
-    remove_entry_leaf++;
     page_t page, copy;
     file_read_page(table_id, leaf_pagenum, &page);
     file_read_page(table_id, leaf_pagenum, &copy);
@@ -641,18 +531,15 @@ pagenum_t remove_entry_from_leaf(int64_t table_id, pagenum_t leaf_pagenum, int64
     PageIO::BPT::LeafPage::set_amount_free_space(&page, free_space);
     PageIO::BPT::set_num_keys(&page, num_keys - 1);
     file_write_page(table_id, leaf_pagenum, &page);
-    dq.pop_back();
-    return  leaf_pagenum;
+    return leaf_pagenum;
 }
 
 pagenum_t adjust_root(int64_t table_id, pagenum_t root_pagenum) {
-    dq.push_back(__func__);
     page_t root;
     file_read_page(table_id, root_pagenum, &root);
 
     // Nothing to do
     if (PageIO::BPT::get_num_keys(&root) > 0) {
-        dq.pop_back();
         return root_pagenum;
     }
 
@@ -666,14 +553,10 @@ pagenum_t adjust_root(int64_t table_id, pagenum_t root_pagenum) {
     }
 
     file_free_page(table_id, root_pagenum);
-
-    dq.pop_back();
     return new_root_pagenum;
 }
 
 pagenum_t merge_internal(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagenum, pagenum_t neighbor_pagenum, int neighbor_index, int64_t key) {
-    dq.push_back(__func__);
-    merge_int++;
     if (neighbor_index == -1) {
         std::swap(pagenum, neighbor_pagenum);
     }
@@ -711,15 +594,11 @@ pagenum_t merge_internal(int64_t table_id, pagenum_t root_pagenum, pagenum_t pag
     root_pagenum = delete_entry(table_id, root_pagenum, PageIO::BPT::get_parent_pagenum(&page), key);
 
     file_free_page(table_id, pagenum);
-    dq.pop_back();
     return root_pagenum;
 }
 
 pagenum_t merge_leaf(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagenum, pagenum_t neighbor_pagenum, int neighbor_index, int64_t key) {
-    dq.push_back(__func__);
-    merge_lf++;
     // Almost copy and paste from merge_internal()
-
     if (neighbor_index == -1) {
         std::swap(pagenum, neighbor_pagenum);
     }
@@ -754,16 +633,11 @@ pagenum_t merge_leaf(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagenum
 
     root_pagenum = delete_entry(table_id, root_pagenum, PageIO::BPT::get_parent_pagenum(&page), key);
     file_free_page(table_id, pagenum);
-    dq.pop_back();
     return root_pagenum;
 }
 
 pagenum_t redistribute_internal(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagenum, pagenum_t neighbor_pagenum, int neighbor_index, int key_index, int64_t key) {
-    dq.push_back(__func__);
-    redist_internal++;
     // Note that there is no change in the tree structure
-
-    // std::cout << "[DEEEBUG] " << pagenum << " " << neighbor_pagenum << " " << neighbor_index << " " << key_index << " " << key << std::endl;
 
     page_t page, neighbor;
     file_read_page(table_id, pagenum, &page);
@@ -786,7 +660,7 @@ pagenum_t redistribute_internal(int64_t table_id, pagenum_t root_pagenum, pagenu
         branch_factor = PageIO::BPT::InternalPage::get_nth_branch_factor(&neighbor, neighbor_num_keys - 1);
 
         PageIO::BPT::InternalPage::set_leftmost_pagenum(&page, branch_factor.get_pagenum());
-        
+
         page_t child;
 
         file_read_page(table_id, branch_factor.get_pagenum(), &child);
@@ -797,9 +671,9 @@ pagenum_t redistribute_internal(int64_t table_id, pagenum_t root_pagenum, pagenu
 
         pagenum_t parent_pagenum = PageIO::BPT::get_parent_pagenum(&page);
         page_t parent;
+
         file_read_page(table_id, parent_pagenum, &parent);
         branch_factor = PageIO::BPT::InternalPage::get_nth_branch_factor(&parent, key_index);
-        // std::cout << branch_factor.get_key() << "\t" << key << "\n";
         branch_factor.set_key(key_prime);
         PageIO::BPT::InternalPage::set_nth_branch_factor(&parent, key_index, branch_factor);
         file_write_page(table_id, parent_pagenum, &parent);
@@ -827,7 +701,6 @@ pagenum_t redistribute_internal(int64_t table_id, pagenum_t root_pagenum, pagenu
         page_t parent;
         file_read_page(table_id, parent_pagenum, &parent);
         branch_factor = PageIO::BPT::InternalPage::get_nth_branch_factor(&parent, key_index);
-        // std::cout << "## " << branch_factor.get_key() << "\t" << key << "\n";
         branch_factor.set_key(key_prime);
         PageIO::BPT::InternalPage::set_nth_branch_factor(&parent, key_index, branch_factor);
         file_write_page(table_id, parent_pagenum, &parent);
@@ -837,20 +710,16 @@ pagenum_t redistribute_internal(int64_t table_id, pagenum_t root_pagenum, pagenu
         }
     }
 
-    // TODO: Adjust numkeys
     PageIO::BPT::set_num_keys(&page, num_keys + 1);
     PageIO::BPT::set_num_keys(&neighbor, neighbor_num_keys - 1);
 
     file_write_page(table_id, pagenum, &page);
     file_write_page(table_id, neighbor_pagenum, &neighbor);
 
-    dq.pop_back();
     return root_pagenum;
 }
 
 pagenum_t redistribute_leaf(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagenum, pagenum_t neighbor_pagenum, int neighbor_index, int key_index, int64_t key) {
-    dq.push_back(__func__);
-    redist_leaf++;
     // Almost copy and paste from redistribute_internal()
     page_t page, neighbor, neighbor_copy;
     file_read_page(table_id, pagenum, &page);
@@ -981,26 +850,20 @@ pagenum_t redistribute_leaf(int64_t table_id, pagenum_t root_pagenum, pagenum_t 
         file_write_page(table_id, parent_pagenum, &parent);
     }
 
-    // TODO: Adjust numkeys
     PageIO::BPT::set_num_keys(&page, num_keys + 1);
     PageIO::BPT::set_num_keys(&neighbor, neighbor_num_keys - 1);
 
     file_write_page(table_id, pagenum, &page);
     file_write_page(table_id, neighbor_pagenum, &neighbor);
 
-    dq.pop_back();
     return root_pagenum;
 }
 
 pagenum_t delete_entry(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagenum, int64_t key) {
-    dq.push_back(__func__);
-    std::cout << "@@@" << "delete entry on pagenum = " << pagenum << " / key = " << key << std::endl;
     page_t page;
     file_read_page(table_id, pagenum, &page);
 
     int is_leaf = PageIO::BPT::get_is_leaf(&page);
-
-    // std::cout << "@#@#" << pagenum << ": is_leaf =" << is_leaf << std::endl;
 
     if (is_leaf) {
         pagenum = remove_entry_from_leaf(table_id, pagenum, key);
@@ -1009,11 +872,9 @@ pagenum_t delete_entry(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagen
     }
 
     if (pagenum == root_pagenum) {
-        dq.pop_back();
         return adjust_root(table_id, root_pagenum);
     }
 
-    // std::cout << "#@@@" << pagenum << std::endl;
     file_read_page(table_id, pagenum, &page);
     is_leaf = PageIO::BPT::get_is_leaf(&page);
 
@@ -1021,7 +882,6 @@ pagenum_t delete_entry(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagen
         uint64_t free_space = PageIO::BPT::LeafPage::get_amount_free_space(&page);
 
         if (free_space < THRESHHOLD) {
-            dq.pop_back();
             return root_pagenum;
         }
 
@@ -1046,10 +906,8 @@ pagenum_t delete_entry(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagen
         file_read_page(table_id, neighbor_pagenum, &neighbor);
 
         if (PageIO::BPT::LeafPage::get_amount_free_space(&neighbor) + free_space >= INITIAL_FREE_SPACE) {
-            dq.pop_back();
             return merge_leaf(table_id, root_pagenum, pagenum, neighbor_pagenum, neighbor_index, k_prime);
         } else {
-            dq.pop_back();
             return redistribute_leaf(table_id, root_pagenum, pagenum, neighbor_pagenum, neighbor_index, k_prime_index, k_prime);
         }
     } else {
@@ -1057,7 +915,6 @@ pagenum_t delete_entry(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagen
         int num_keys = PageIO::BPT::get_num_keys(&page);
 
         if (num_keys >= min_keys) {
-            dq.pop_back();
             return root_pagenum;
         }
         pagenum_t parent_pagenum = PageIO::BPT::get_parent_pagenum(&page);
@@ -1066,8 +923,6 @@ pagenum_t delete_entry(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagen
 
         int neighbor_index = get_neighbor_index(table_id, pagenum);
         int k_prime_index = neighbor_index == -1 ? 0 : neighbor_index;
-
-
 
         branch_factor_t branch_factor = PageIO::BPT::InternalPage::get_nth_branch_factor(&parent, k_prime_index);
         int64_t k_prime = branch_factor.get_key();
@@ -1084,17 +939,14 @@ pagenum_t delete_entry(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagen
         file_read_page(table_id, neighbor_pagenum, &neighbor);
 
         if (PageIO::BPT::get_num_keys(&neighbor) + num_keys < NODE_MAX_KEYS) {
-            dq.pop_back();
             return merge_internal(table_id, root_pagenum, pagenum, neighbor_pagenum, neighbor_index, k_prime);
         } else {
-            dq.pop_back();
             return redistribute_internal(table_id, root_pagenum, pagenum, neighbor_pagenum, neighbor_index, k_prime_index, k_prime);
         }
     }
 }
 
 pagenum_t _delete(int64_t table_id, pagenum_t root_pagenum, int64_t key) {
-    dq.push_back(__func__);
     char buffer[MAX_VAL_SIZE];
     uint16_t size;
     int err = find(table_id, root_pagenum, key, buffer, &size);
@@ -1103,25 +955,7 @@ pagenum_t _delete(int64_t table_id, pagenum_t root_pagenum, int64_t key) {
     if (err == 0 && leaf_pagenum != 0) {
         root_pagenum = delete_entry(table_id, root_pagenum, leaf_pagenum, key);
     }
-
-    dq.pop_back();
     return root_pagenum;
-}
-
-int remove_entry_internal = 0;
-int remove_entry_leaf = 0;
-int merge_int = 0;
-int merge_lf = 0;
-int redist_internal = 0;
-int redist_leaf = 0;
-
-void printTotalCalls() {
-    std::cout << "[DEBUG] remove_entry_internal = " << remove_entry_internal << std::endl;
-    std::cout << "[DEBUG] remove_entry_leaf = " << remove_entry_leaf << std::endl;
-    std::cout << "[DEBUG] merge_int = " << merge_int << std::endl;
-    std::cout << "[DEBUG] merge_lf = " << merge_lf << std::endl;
-    std::cout << "[DEBUG] redist_internal = " << redist_internal << std::endl;
-    std::cout << "[DEBUG] redist_leaf = " << redist_leaf << std::endl;
 }
 
 // =================================================================================================
@@ -1144,16 +978,6 @@ int db_insert(int64_t table_id, int64_t key, char* value, uint16_t val_size) {
     }
     root_pagenum = insert(table_id, root_pagenum, key, value, val_size);
 
-    // std::cout << "[DEBUG] root_pagenum = " << root_pagenum << " after insert." << std::endl;
-    // page_t root;
-    // file_read_page(table_id, root_pagenum, &root);
-    // int num_keys = PageIO::BPT::get_num_keys(&root);
-    // std::cout << "[DEBUG] keys are: ";
-    // for (int i = 0; i < num_keys; i++) {
-    //     std::cout << PageIO::BPT::InternalPage::get_nth_branch_factor(&root, i).get_key() << "(" << PageIO::BPT::InternalPage::get_nth_branch_factor(&root, i).get_pagenum() << ") ";
-    // }
-    // std::cout << std::endl;
-
     file_read_page(table_id, 0, &header);
     PageIO::HeaderPage::set_root_pagenum(&header, root_pagenum);
     file_write_page(table_id, 0, &header);
@@ -1169,7 +993,6 @@ int db_find(int64_t table_id, int64_t key, char* ret_val, uint16_t* val_size) {
 }
 
 int db_delete(int64_t table_id, int64_t key) {
-    dq.push_back(__func__);
     page_t header;
     file_read_page(table_id, 0, &header);
     pagenum_t root_pagenum = PageIO::HeaderPage::get_root_pagenum(&header);
@@ -1178,8 +1001,6 @@ int db_delete(int64_t table_id, int64_t key) {
     file_read_page(table_id, 0, &header);
     PageIO::HeaderPage::set_root_pagenum(&header, root_pagenum);
     file_write_page(table_id, 0, &header);
-
-    dq.pop_back();
     return 0;
 }
 
@@ -1188,9 +1009,6 @@ int init_db() {
 }
 
 int shutdown_db() {
-#ifdef DEBUG
-    printTotalCalls();
-#endif
     file_close_database_file();
     return 0;
 }
@@ -1226,28 +1044,9 @@ void print_tree(int64_t table_id, pagenum_t pagenum) {
 }
 
 void db_print_tree(int64_t table_id) {
-    static int depth = 0;
-    depth++;
-
-    if (depth > 100) {
-        throw new std::exception();
-    }
     page_t header, root;
     file_read_page(table_id, 0, &header);
     pagenum_t root_pagenum = PageIO::HeaderPage::get_root_pagenum(&header);
 
     print_tree(table_id, root_pagenum);
-    depth--;
-}
-
-void printCallStack() {
-    int tabs = 0;
-    while (!dq.empty()) {
-        for (int i = 0; i < tabs; i++) {
-            std::cout << "    ";
-        }
-        std::cout << "At " << dq.front() << "()" << std::endl;
-        dq.pop_front();
-        tabs++;
-    }
 }
