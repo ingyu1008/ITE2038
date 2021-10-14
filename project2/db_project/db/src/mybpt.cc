@@ -962,7 +962,7 @@ pagenum_t _delete(int64_t table_id, pagenum_t root_pagenum, int64_t key) {
 // API
 
 int64_t open_table(char* pathname) {
-    int fd = file_open_database_file(pathname);
+    int64_t fd = file_open_table_file(pathname);
     return fd;
 }
 

@@ -11,7 +11,7 @@ TEST(FileManager, FileInitializationTest)
     {
         std::cout << "[INFO] File 'testdb' already exists. Deleting it." << std::endl;
     }
-    int fd = file_open_database_file("testdb");
+    int64_t fd = file_open_table_file("testdb");
     page_t header;
     file_read_page(fd, 0, &header);
     if (fd < 0 || fd >= 1024)
@@ -28,7 +28,7 @@ TEST(FileManager, FileInitializationTest)
 // Page Management - Simple Alloc/Free
 TEST(FileManager, SimpleAllocFree)
 {
-    int fd = file_open_database_file("testdb");
+    int64_t fd = file_open_table_file("testdb");
 
     page_t header;
 
@@ -64,7 +64,7 @@ TEST(FileManager, SimpleAllocFree)
 // Page Management - Double Page Size Check
 TEST(FileManager, AdvancedAllocation)
 {
-    int fd = file_open_database_file("testdb");
+    int64_t fd = file_open_table_file("testdb");
 
     std::vector<pagenum_t> allocated;
 
@@ -98,14 +98,14 @@ TEST(FileManager, PageIO)
 {
     char buffer[PAGE_SIZE] = "Hello World! abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-    int fd = file_open_database_file("testdb");
+    int64_t fd = file_open_table_file("testdb");
 
     pagenum_t p = file_alloc_page(fd);
 
-    file_write_page(fd, p, reinterpret_cast<const page_t *>(buffer));
+    file_write_page(fd, p, buffer);
 
     char dest[PAGE_SIZE] = "";
-    file_read_page(fd, p, reinterpret_cast<page_t *>(dest));
+    file_read_page(fd, p, dest);
 
     for (int i = 0; i < PAGE_SIZE; i++)
     {
