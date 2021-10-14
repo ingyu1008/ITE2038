@@ -908,7 +908,12 @@ pagenum_t delete_entry(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagen
         if (PageIO::BPT::LeafPage::get_amount_free_space(&neighbor) + free_space >= INITIAL_FREE_SPACE) {
             return merge_leaf(table_id, root_pagenum, pagenum, neighbor_pagenum, neighbor_index, k_prime);
         } else {
-            return redistribute_leaf(table_id, root_pagenum, pagenum, neighbor_pagenum, neighbor_index, k_prime_index, k_prime);
+            page_t check;
+            do {
+                root_pagenum = redistribute_leaf(table_id, root_pagenum, pagenum, neighbor_pagenum, neighbor_index, k_prime_index, k_prime);
+                file_read_page(table_id, pagenum, &check);
+            } while (PageIO::BPT::LeafPage::get_amount_free_space(&check) >= THRESHHOLD);
+            return root_pagenum;
         }
     } else {
         int min_keys = NODE_MAX_KEYS / 2;
