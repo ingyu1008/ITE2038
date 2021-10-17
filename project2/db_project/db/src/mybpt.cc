@@ -887,12 +887,13 @@ pagenum_t delete_entry(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagen
 
         int neighbor_index = get_neighbor_index(table_id, pagenum);
         int k_prime_index = neighbor_index == -1 ? 0 : neighbor_index;
-
         pagenum_t parent_pagenum = PageIO::BPT::get_parent_pagenum(&page);
         page_t parent;
         file_read_page(table_id, parent_pagenum, &parent);
         branch_factor_t branch_factor = PageIO::BPT::InternalPage::get_nth_branch_factor(&parent, k_prime_index);
         int64_t k_prime = branch_factor.get_key();
+
+
         pagenum_t neighbor_pagenum;
         if (neighbor_index == -1) {
             neighbor_pagenum = PageIO::BPT::InternalPage::get_nth_branch_factor(&parent, 0).get_pagenum();
@@ -910,6 +911,10 @@ pagenum_t delete_entry(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagen
         } else {
             page_t check;
             do {
+                file_read_page(table_id, parent_pagenum, &parent);
+                branch_factor = PageIO::BPT::InternalPage::get_nth_branch_factor(&parent, k_prime_index);
+                k_prime = branch_factor.get_key();
+
                 root_pagenum = redistribute_leaf(table_id, root_pagenum, pagenum, neighbor_pagenum, neighbor_index, k_prime_index, k_prime);
                 file_read_page(table_id, pagenum, &check);
             } while (PageIO::BPT::LeafPage::get_amount_free_space(&check) >= THRESHHOLD);
