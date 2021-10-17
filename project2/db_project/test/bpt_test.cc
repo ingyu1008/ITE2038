@@ -4,6 +4,16 @@
 
 #include <gtest/gtest.h>
 
+TEST(BPlus, DoubleOpen){
+    EXPECT_EQ(init_db(), 0);
+
+    int64_t table_id = open_table("test.dat");
+    int64_t table_id2 = open_table("test.dat");
+
+    EXPECT_GE(table_id, 0);
+    EXPECT_EQ(table_id2, -1);
+}
+
 TEST(BPlus, InsertOperationSmall) {
     if (std::remove("insertTest.dat") == 0)
     {
@@ -31,11 +41,11 @@ TEST(BPlus, InsertOperationSmall) {
         char ret_val[112];
         int res = db_find(table_id, i, ret_val, &val_size);
         if (i <= 0 || i > 100) {
-            EXPECT_EQ(res, 1);
-            err += res ^ 1;
+            EXPECT_EQ(res, -1);
+            err += (res != -1);
         } else {
             EXPECT_EQ(res, 0);
-            err += res;
+            err -= res;
         }
         if (res) {
             std::cout << "[INFO] Could not find record with key = " << i << std::endl;
@@ -73,7 +83,7 @@ TEST(BPlus, DeleteOperationSmall) {
         EXPECT_EQ(db_delete(table_id, i), 0);
         st.erase(i);
         for (int j = 1; j <= 100; j++) {
-            EXPECT_EQ(db_find(table_id, j, buffer, &val_size), st.find(j) == st.end());
+            EXPECT_EQ(-db_find(table_id, j, buffer, &val_size), st.find(j) == st.end());
         }
     }
 
@@ -116,11 +126,11 @@ TEST(BPlus, InsertOperationLarge) {
         char ret_val[112];
         int res = db_find(table_id, i, ret_val, &val_size);
         if (i <= 0 || i > n) {
-            EXPECT_EQ(res, 1);
-            err += res ^ 1;
+            EXPECT_EQ(res, -1);
+            err += (res != -1);
         } else {
             EXPECT_EQ(res, 0);
-            err += res;
+            err -= res;
         }
         if (res) {
             std::cout << "[INFO] Could not find record with key = " << i << std::endl;
@@ -163,7 +173,7 @@ TEST(BPlus, DeleteOperationLarge) {
             st.erase(i);
             for (int j = 1; j <= 10; j++) {
                 int rnd = rand(gen);
-                EXPECT_EQ(db_find(table_id, rnd, buffer, &val_size), st.find(rnd) == st.end());
+                EXPECT_EQ(-db_find(table_id, rnd, buffer, &val_size), st.find(rnd) == st.end());
             }
         }
     }
@@ -223,10 +233,10 @@ TEST(BPlus, InsertOperationRandomized) {
         char ret_val[112];
         int res = db_find(table_id, i, ret_val, &val_size);
         if (i <= 0 || i > n) {
-            EXPECT_EQ(res, 1);
+            EXPECT_EQ(res, -1);
         } else {
             EXPECT_EQ(res, 0);
-            err += res;
+            err -= res;
         }
         if (res) {
             std::cout << "[INFO] Could not find record with key = " << i << std::endl;
@@ -271,7 +281,7 @@ TEST(BPlus, DeleteOperationRandomized) {
             st.erase(i);
             for (int j = 1; j <= 10; j++) {
                 int rnd = rand(gen);
-                int res = db_find(table_id, rnd, buffer, &val_size);
+                int res = -db_find(table_id, rnd, buffer, &val_size);
                 EXPECT_EQ(res, st.find(rnd) == st.end());
             }
         }

@@ -1,6 +1,6 @@
 #include "mybpt.h"
 #include "file.h"
-#include <deque>
+#include <set>
 
 // Find Operations
 
@@ -37,7 +37,7 @@ pagenum_t find_leaf(int64_t table_id, pagenum_t root_pagenum, int64_t key) {
 int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, uint16_t* val_size) {
     pagenum_t leaf = find_leaf(table_id, root_pagenum, key);
 
-    if (leaf == 0) return 1;
+    if (leaf == 0) return -1;
 
     page_t page;
     file_read_page(table_id, leaf, &page);
@@ -50,7 +50,7 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
         if (slot.get_key() == key) break;
     }
     if (i == num_keys) {
-        return 1;
+        return -1;
     } else {
         *val_size = slot.get_size();
         page.get_data(ret_val, slot.get_offset(), *val_size);
@@ -964,15 +964,28 @@ pagenum_t _delete(int64_t table_id, pagenum_t root_pagenum, int64_t key) {
 
     if (err == 0 && leaf_pagenum != 0) {
         root_pagenum = delete_entry(table_id, root_pagenum, leaf_pagenum, key);
+        return root_pagenum;
     }
-    return root_pagenum;
+    return -1;
 }
 
 // =================================================================================================
 // API
+namespace Util{
+    std::set<std::string> opened_tables;
+}
 
 int64_t open_table(char* pathname) {
+    if (Util::opened_tables.find(std::string(pathname)) != Util::opened_tables.end()) {
+        return -1;
+    } else if (Util::opened_tables.size() == 19) { // Total number of tables is less than 20
+        return -1;
+    }
+
     int64_t fd = file_open_table_file(pathname);
+
+    Util::opened_tables.insert(std::string(pathname));
+
     return fd;
 }
 
@@ -1008,6 +1021,8 @@ int db_delete(int64_t table_id, int64_t key) {
     pagenum_t root_pagenum = PageIO::HeaderPage::get_root_pagenum(&header);
     root_pagenum = _delete(table_id, root_pagenum, key);
 
+    if(root_pagenum < 0) return -1;
+
     file_read_page(table_id, 0, &header);
     PageIO::HeaderPage::set_root_pagenum(&header, root_pagenum);
     file_write_page(table_id, 0, &header);
@@ -1019,6 +1034,7 @@ int init_db() {
 }
 
 int shutdown_db() {
+    Util::opened_tables.clear();
     file_close_database_file();
     return 0;
 }
