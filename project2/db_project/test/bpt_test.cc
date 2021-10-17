@@ -197,7 +197,8 @@ TEST(BPlus, InsertOperationRandomized) {
         v.push_back(i);
     }
 
-    std::random_shuffle(v.begin(), v.end());
+    std::mt19937 gen(2020011776);
+    std::shuffle(v.begin(), v.end(), gen);
 
     for (auto& i : v) {
         std::string data = "01234567890123456789012345678901234567890123456789" + std::to_string(i);
