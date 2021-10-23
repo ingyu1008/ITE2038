@@ -3,6 +3,8 @@
 
 #include "page.h"
 #include "file.h"
+#include "buffer.h"
+#include <set>
 
 
 constexpr uint64_t NODE_MAX_KEYS = (PAGE_SIZE - PH_SIZE) / BRANCH_FACTOR_SIZE;

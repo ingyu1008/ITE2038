@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-TEST(BPlus, DoubleOpen){
+TEST(BPlus, DoubleOpen) {
     EXPECT_EQ(init_db(), 0);
 
     int64_t table_id = open_table("test.dat");
@@ -24,7 +24,9 @@ TEST(BPlus, InsertOperationSmall) {
 
     int table_id = open_table("insertTest.dat");
 
-    for (int i = 1; i <= 100; i++) {
+    int n = 100;
+
+    for (int i = 1; i <= n; i++) {
         std::string data = "01234567890123456789012345678901234567890123456789" + std::to_string(i);
         int res = db_insert(table_id, i, const_cast<char*>(data.c_str()), data.length());
         EXPECT_EQ(res, 0);
@@ -33,14 +35,15 @@ TEST(BPlus, InsertOperationSmall) {
         }
     }
 
-    std::cout << "[INFO] Successfully inserted 100 records." << std::endl;
+    std::cout << "[INFO] Successfully inserted " << n << " records." << std::endl;
+    db_print_tree(table_id);
 
     int err = 0;
     uint16_t val_size;
-    for (int i = -10; i <= 110; i++) {
+    for (int i = -10; i <= n + 10; i++) {
         char ret_val[112];
         int res = db_find(table_id, i, ret_val, &val_size);
-        if (i <= 0 || i > 100) {
+        if (i <= 0 || i > n) {
             EXPECT_EQ(res, -1);
             err += (res != -1);
         } else {
@@ -55,9 +58,10 @@ TEST(BPlus, InsertOperationSmall) {
         std::cout << "[FATAL] Something has gone wrong." << std::endl;
         FAIL();
     } else {
-        std::cout << "[INFO] Successfully found all 100 records." << std::endl;
+        std::cout << "[INFO] Successfully found all " << n << " records." << std::endl;
     }
 
+    // db_print_tree(table_id);
     EXPECT_EQ(shutdown_db(), 0);
 }
 
@@ -65,6 +69,7 @@ TEST(BPlus, DeleteOperationSmall) {
     EXPECT_EQ(init_db(), 0);
 
     int table_id = open_table("insertTest.dat");
+    db_print_tree(table_id);
     char buffer[MAX_VAL_SIZE];
     uint16_t val_size;
 
@@ -76,8 +81,6 @@ TEST(BPlus, DeleteOperationSmall) {
         st.insert(i);
     }
 
-
-
     for (int i = mn; i <= n; i++) {
         EXPECT_EQ(db_find(table_id, i, buffer, &val_size), 0);
         EXPECT_EQ(db_delete(table_id, i), 0);
@@ -85,6 +88,7 @@ TEST(BPlus, DeleteOperationSmall) {
         for (int j = 1; j <= 100; j++) {
             EXPECT_EQ(-db_find(table_id, j, buffer, &val_size), st.find(j) == st.end());
         }
+        // db_print_tree(table_id);
     }
 
     EXPECT_EQ(shutdown_db(), 0);
@@ -181,7 +185,7 @@ TEST(BPlus, DeleteOperationLarge) {
         std::cout << "[FATAL] Something went wrong while deleting " << i << std::endl;
         std::cout << "[FATAL] " << e.what() << std::endl;
 
-        db_print_tree(table_id);
+        // db_print_tree(table_id);
         shutdown_db();
         FAIL();
     }
@@ -290,7 +294,7 @@ TEST(BPlus, DeleteOperationRandomized) {
         std::cout << "[FATAL] Something went wrong while deleting " << j << std::endl;
         std::cout << "[FATAL] " << e.what() << std::endl;
 
-        db_print_tree(table_id);
+        // db_print_tree(table_id);
         shutdown_db();
         FAIL();
     }
