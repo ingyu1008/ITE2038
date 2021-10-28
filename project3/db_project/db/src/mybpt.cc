@@ -1,12 +1,6 @@
 #include "mybpt.h"
 #include "page.h"
-
-void return_ctrl_block(control_block_t** ctrl_block, int is_dirty = 0) {
-    if (ctrl_block == nullptr || (*ctrl_block) == nullptr) return;
-    (*ctrl_block)->is_pinned--;
-    (*ctrl_block)->is_dirty |= is_dirty;
-    (*ctrl_block) = nullptr;
-}
+#include "buffer.h"
 
 // Find Operations
 
@@ -1179,7 +1173,7 @@ int db_delete(int64_t table_id, int64_t key) {
 }
 
 int init_db() {
-    buf_init_db(1000);
+    buf_init_db(30000);
     return 0;
 }
 

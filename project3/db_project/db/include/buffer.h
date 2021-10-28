@@ -17,6 +17,8 @@ struct control_block_t {
     control_block_t* prev;
 };
 
+void return_ctrl_block(control_block_t** ctrl_block, int is_dirty = 0);
+
 // Simple
 int64_t buf_open_table_file(const char* pathname);
 

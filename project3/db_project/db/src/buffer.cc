@@ -12,6 +12,13 @@ std::map<std::pair<int64_t, pagenum_t>, control_block_t*> pagemap;
 int cache_hit = 0;
 int tot_read = 0;
 
+void return_ctrl_block(control_block_t** ctrl_block, int is_dirty) {
+    if (ctrl_block == nullptr || (*ctrl_block) == nullptr) return;
+    (*ctrl_block)->is_pinned--;
+    (*ctrl_block)->is_dirty |= is_dirty;
+    (*ctrl_block) = nullptr;
+}
+
 /* Calls file_open_table_file and maps table_id with table index.
  */
 int64_t buf_open_table_file(const char* pathname) {
@@ -118,6 +125,7 @@ void buf_free_page(int64_t table_id, pagenum_t page_number)
     if (pagemap.find(std::make_pair(table_id, page_number)) == pagemap.end()) {
         // Simple case: just free it
         file_free_page(table_id, page_number);
+        return;
     }
 
     // page already on the buffer
@@ -145,12 +153,6 @@ int buf_shutdown_db() {
     int total = 0;
     int final_buffer_size = 0;
 
-    control_block_t* x = victim;
-    do {
-        x = x->next;
-        final_buffer_size++;
-    } while (x != victim);
-
     for (int i = 0; i < buf_size; i++) {
         control_block_t* cur = buffer_ctrl_blocks[i];
         total += cur->is_pinned;
@@ -163,7 +165,6 @@ int buf_shutdown_db() {
     file_close_database_file();
 
     std::cout << "[DEBUG] Total pin count on shutdown_db() = " << total << std::endl;
-    std::cout << "[DEBUG] Final buffer size shutdown_db() = " << final_buffer_size << std::endl;
     std::cout << "[DEBUG] " << cache_hit << " hits out of " << tot_read << " read operations." << std::endl;
     return total == 0;
 }
