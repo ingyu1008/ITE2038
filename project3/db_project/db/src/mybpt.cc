@@ -73,7 +73,7 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
  * to serve as either a leaf or an internal page.
  */
 pagenum_t make_node(int64_t table_id) {
-    pagenum_t pagenum = file_alloc_page(table_id);
+    pagenum_t pagenum = buf_alloc_page(table_id);
 
     control_block_t* ctrl_block = buf_read_page(table_id, pagenum);
     // file_read_page(table_id, pagenum, &page);
@@ -1133,9 +1133,11 @@ int64_t open_table(char* pathname) {
 }
 
 int db_insert(int64_t table_id, int64_t key, char* value, uint16_t val_size) {
-    page_t header;
-    file_read_page(table_id, 0, &header);
-    pagenum_t root_pagenum = PageIO::HeaderPage::get_root_pagenum(&header);
+    control_block_t* header_ctrl_block = buf_read_page(table_id, 0);
+    // page_t header;
+    // file_read_page(table_id, 0, &header);
+    pagenum_t root_pagenum = PageIO::HeaderPage::get_root_pagenum(header_ctrl_block->frame);
+    return_ctrl_block(&header_ctrl_block);
 
     char buffer[MAX_VAL_SIZE];
     uint16_t size;
@@ -1144,31 +1146,39 @@ int db_insert(int64_t table_id, int64_t key, char* value, uint16_t val_size) {
     }
     root_pagenum = insert(table_id, root_pagenum, key, value, val_size);
 
-    file_read_page(table_id, 0, &header);
-    PageIO::HeaderPage::set_root_pagenum(&header, root_pagenum);
-    file_write_page(table_id, 0, &header);
+    header_ctrl_block = buf_read_page(table_id, 0);
+    // file_read_page(table_id, 0, &header);
+    PageIO::HeaderPage::set_root_pagenum(header_ctrl_block->frame, root_pagenum);
+    return_ctrl_block(&header_ctrl_block, 1);
+    // file_write_page(table_id, 0, &header);
 
     return 0;
 }
 
 int db_find(int64_t table_id, int64_t key, char* ret_val, uint16_t* val_size) {
-    page_t header;
-    file_read_page(table_id, 0, &header);
-    pagenum_t root_pagenum = PageIO::HeaderPage::get_root_pagenum(&header);
+    control_block_t* header_ctrl_block = buf_read_page(table_id, 0);
+    // page_t header;
+    // file_read_page(table_id, 0, &header);
+    pagenum_t root_pagenum = PageIO::HeaderPage::get_root_pagenum(header_ctrl_block->frame);
+    return_ctrl_block(&header_ctrl_block);
     return find(table_id, root_pagenum, key, ret_val, val_size);
 }
 
 int db_delete(int64_t table_id, int64_t key) {
-    page_t header;
-    file_read_page(table_id, 0, &header);
-    pagenum_t root_pagenum = PageIO::HeaderPage::get_root_pagenum(&header);
+    control_block_t* header_ctrl_block = buf_read_page(table_id, 0);
+    // page_t header;
+    // file_read_page(table_id, 0, &header);
+    pagenum_t root_pagenum = PageIO::HeaderPage::get_root_pagenum(header_ctrl_block->frame);
+    return_ctrl_block(&header_ctrl_block);
     root_pagenum = _delete(table_id, root_pagenum, key);
 
     if (root_pagenum < 0) return -1;
 
-    file_read_page(table_id, 0, &header);
-    PageIO::HeaderPage::set_root_pagenum(&header, root_pagenum);
-    file_write_page(table_id, 0, &header);
+    header_ctrl_block = buf_read_page(table_id, 0);
+    // file_read_page(table_id, 0, &header);
+    PageIO::HeaderPage::set_root_pagenum(header_ctrl_block->frame, root_pagenum);
+    return_ctrl_block(&header_ctrl_block, 1);
+    // file_write_page(table_id, 0, &header);
     return 0;
 }
 
@@ -1216,10 +1226,12 @@ void print_tree(int64_t table_id, pagenum_t pagenum) {
     return_ctrl_block(&ctrl_block);
 }
 
+// Deprecated
 void db_print_tree(int64_t table_id) {
-    page_t header, root;
-    file_read_page(table_id, 0, &header);
-    pagenum_t root_pagenum = PageIO::HeaderPage::get_root_pagenum(&header);
+    std::cout << "[DEBUG] db_print_tree is now not supported" << std::endl;
+    // page_t header, root;
+    // file_read_page(table_id, 0, &header);
+    // pagenum_t root_pagenum = PageIO::HeaderPage::get_root_pagenum(&header);
 
     // print_tree(table_id, root_pagenum);
 }
