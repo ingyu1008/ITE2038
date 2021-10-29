@@ -30,40 +30,6 @@ int64_t buf_open_table_file(const char* pathname) {
     // return index++;
 }
 
-/* Initialzer for buffer and buffer control blocks.
- */
-int buf_init_db(int num_buf) {
-    buf_size = num_buf;
-    buffer.clear();
-    buffer_ctrl_blocks.clear();
-    tablemap.clear();
-    pagemap.clear();
-    buffer.resize(num_buf);
-    buffer_ctrl_blocks.resize(num_buf);
-
-    for (int i = 0; i < num_buf; i++) {
-        buffer[i] = (page_t*)malloc(sizeof(page_t));
-        buffer_ctrl_blocks[i] = (control_block_t*)malloc(sizeof(control_block_t));
-
-        if (buffer[i] == nullptr || buffer_ctrl_blocks[i] == nullptr) {
-            std::cout << "[FATAL] Memory Allocation Failed at " << __func__ << std::endl;
-            exit(EXIT_FAILURE);
-        }
-    }
-    for (int i = 0; i < num_buf; i++) {
-        buffer_ctrl_blocks[i]->frame = buffer[i];
-        buffer_ctrl_blocks[i]->table_id = -1;
-        buffer_ctrl_blocks[i]->pagenum = 0;
-        buffer_ctrl_blocks[i]->is_dirty = 0;
-        buffer_ctrl_blocks[i]->is_pinned = 0;
-        buffer_ctrl_blocks[i]->next = buffer_ctrl_blocks[(i + num_buf - 1) % num_buf];
-        buffer_ctrl_blocks[i]->prev = buffer_ctrl_blocks[(i + 1) % num_buf];
-    }
-
-    victim = buffer_ctrl_blocks[0];
-    return 0;
-}
-
 void move_to_beg_of_list(control_block_t* cur) {
     if (cur == victim) {
         victim = victim->prev;
@@ -120,6 +86,10 @@ control_block_t* buf_read_page(int64_t table_id, pagenum_t page_number) {
     return cur;
 }
 
+pagenum_t buf_alloc_page(int64_t table_id){
+    
+}
+
 void buf_free_page(int64_t table_id, pagenum_t page_number)
 {
     if (pagemap.find(std::make_pair(table_id, page_number)) == pagemap.end()) {
@@ -148,6 +118,41 @@ void buf_free_page(int64_t table_id, pagenum_t page_number)
 
     file_free_page(table_id, page_number);
 }
+
+/* Initialzer for buffer and buffer control blocks.
+ */
+int buf_init_db(int num_buf) {
+    buf_size = num_buf;
+    buffer.clear();
+    buffer_ctrl_blocks.clear();
+    tablemap.clear();
+    pagemap.clear();
+    buffer.resize(num_buf);
+    buffer_ctrl_blocks.resize(num_buf);
+
+    for (int i = 0; i < num_buf; i++) {
+        buffer[i] = (page_t*)malloc(sizeof(page_t));
+        buffer_ctrl_blocks[i] = (control_block_t*)malloc(sizeof(control_block_t));
+
+        if (buffer[i] == nullptr || buffer_ctrl_blocks[i] == nullptr) {
+            std::cout << "[FATAL] Memory Allocation Failed at " << __func__ << std::endl;
+            exit(EXIT_FAILURE);
+        }
+    }
+    for (int i = 0; i < num_buf; i++) {
+        buffer_ctrl_blocks[i]->frame = buffer[i];
+        buffer_ctrl_blocks[i]->table_id = -1;
+        buffer_ctrl_blocks[i]->pagenum = 0;
+        buffer_ctrl_blocks[i]->is_dirty = 0;
+        buffer_ctrl_blocks[i]->is_pinned = 0;
+        buffer_ctrl_blocks[i]->next = buffer_ctrl_blocks[(i + num_buf - 1) % num_buf];
+        buffer_ctrl_blocks[i]->prev = buffer_ctrl_blocks[(i + 1) % num_buf];
+    }
+
+    victim = buffer_ctrl_blocks[0];
+    return 0;
+}
+
 
 int buf_shutdown_db() {
     int total = 0;
