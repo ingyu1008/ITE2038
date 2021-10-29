@@ -92,12 +92,11 @@ control_block_t* buf_read_page(int64_t table_id, pagenum_t page_number) {
 }
 
 pagenum_t buf_alloc_page(int64_t table_id) {
-
 }
 
 void buf_free_page(int64_t table_id, pagenum_t page_number)
 {
-    control_block_t* cur = find(table_id, page_number); //pagemap[std::make_pair(table_id, page_number)];
+    control_block_t* cur = find_buffer(table_id, page_number); //pagemap[std::make_pair(table_id, page_number)];
     if (cur == nullptr) {
         // Simple case: just free it
         file_free_page(table_id, page_number);
