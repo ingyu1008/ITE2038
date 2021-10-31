@@ -1182,8 +1182,9 @@ int db_delete(int64_t table_id, int64_t key) {
     return 0;
 }
 
-int init_db() {
-    buf_init_db(30000);
+int init_db(int num_buf) {
+    if(num_buf < 3) num_buf = 3;
+    buf_init_db(num_buf);
     return 0;
 }
 

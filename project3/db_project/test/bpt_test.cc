@@ -3,9 +3,10 @@
 #include <random>
 
 #include <gtest/gtest.h>
+#define BUF_SIZE 2048
 
 TEST(BPlus, DoubleOpen) {
-    EXPECT_EQ(init_db(), 0);
+    EXPECT_EQ(init_db(BUF_SIZE), 0);
 
     int64_t table_id = open_table("test.dat");
     int64_t table_id2 = open_table("test.dat");
@@ -20,7 +21,7 @@ TEST(BPlus, InsertOperationSmall) {
         std::cout << "[INFO] File 'insertTest.dat' already exists. Deleting it." << std::endl;
     }
 
-    EXPECT_EQ(init_db(), 0);
+    EXPECT_EQ(init_db(BUF_SIZE), 0);
 
     int table_id = open_table("insertTest.dat");
 
@@ -66,7 +67,7 @@ TEST(BPlus, InsertOperationSmall) {
 }
 
 TEST(BPlus, DeleteOperationSmall) {
-    EXPECT_EQ(init_db(), 0);
+    EXPECT_EQ(init_db(BUF_SIZE), 0);
 
     int table_id = open_table("insertTest.dat");
     db_print_tree(table_id);
@@ -100,7 +101,7 @@ TEST(BPlus, InsertOperationLarge) {
         std::cout << "[INFO] File 'insertTest.dat' already exists. Deleting it." << std::endl;
     }
 
-    EXPECT_EQ(init_db(), 0);
+    EXPECT_EQ(init_db(BUF_SIZE), 0);
 
     int table_id = open_table("insertTest.dat");
 
@@ -151,7 +152,7 @@ TEST(BPlus, InsertOperationLarge) {
 }
 
 TEST(BPlus, DeleteOperationLarge) {
-    EXPECT_EQ(init_db(), 0);
+    EXPECT_EQ(init_db(BUF_SIZE), 0);
 
     int table_id = open_table("insertTest.dat");
     char buffer[MAX_VAL_SIZE];
@@ -199,7 +200,7 @@ TEST(BPlus, InsertOperationRandomized) {
         std::cout << "[INFO] File 'insertTest.dat' already exists. Deleting it." << std::endl;
     }
 
-    EXPECT_EQ(init_db(), 0);
+    EXPECT_EQ(init_db(BUF_SIZE), 0);
 
     int table_id = open_table("insertTest.dat");
 
@@ -257,7 +258,7 @@ TEST(BPlus, InsertOperationRandomized) {
 }
 
 TEST(BPlus, DeleteOperationRandomized) {
-    EXPECT_EQ(init_db(), 0);
+    EXPECT_EQ(init_db(BUF_SIZE), 0);
 
     int table_id = open_table("insertTest.dat");
     char buffer[MAX_VAL_SIZE];
