@@ -35,8 +35,6 @@ int init_lock_table() {
 
 lock_t* lock_acquire(int64_t table_id, int64_t key) {
 	pthread_mutex_lock(&lock_table_latch);
-	static int x = 0;
-	std::cout << "lock_acquire " << table_id << " " << key << " " << x++ << std::endl;
 	std::pair<int64_t, int64_t> p(table_id, key);
 	hash_table_entry_t* list = lock_table[p];
 	if (list == NULL) {
@@ -58,7 +56,8 @@ lock_t* lock_acquire(int64_t table_id, int64_t key) {
 	list->tail = lock;
 	if (list->head == NULL) {
 		list->head = lock;
-	} else {
+	}
+	while (list->head != lock) {
 		pthread_cond_wait(&lock->lock_table_cond, &lock_table_latch);
 	}
 	pthread_mutex_unlock(&lock_table_latch);
@@ -71,16 +70,16 @@ int lock_release(lock_t* lock_obj) {
 	lock_t* prev = lock_obj->prev;
 	lock_t* next = lock_obj->next;
 	hash_table_entry_t* list = lock_obj->sentinel;
-	static int x = 0;
-	std::cout << "lock_release " << list->table_id << " " << list->key << " " << x++ << std::endl;
 	if (prev != NULL) {
-		/* not needed, only head will be removed */
 		prev->next = next;
 	}
 	if (next != NULL) {
-		next->prev = prev; // NULL
+		next->prev = prev;
 	}
 	list->head = next;
+	if(next == NULL){
+		list->tail = NULL;
+	}
 	if (next != NULL) {
 		pthread_cond_signal(&next->lock_table_cond);
 	}
