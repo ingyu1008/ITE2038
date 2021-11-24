@@ -1,6 +1,8 @@
 #include "mybpt.h"
 #include "page.h"
 #include "buffer.h"
+#include "lock_table.h"
+#include "trx.h"
 
 // Find Operations
 
@@ -39,11 +41,10 @@ pagenum_t find_leaf(int64_t table_id, pagenum_t root_pagenum, int64_t key) {
     return cur;
 }
 
-int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, uint16_t* val_size) {
+int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, uint16_t* val_size, int trx_id = 0) {
     pagenum_t leaf = find_leaf(table_id, root_pagenum, key);
 
     if (leaf == 0) return -1;
-
 
     control_block_t* ctrl_block = buf_read_page(table_id, leaf);
     // file_read_page(table_id, leaf, &page);
@@ -58,10 +59,19 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
     if (i == num_keys) {
         return_ctrl_block(&ctrl_block);
         return -1;
-    } else {
-        *val_size = slot.get_size();
-        ctrl_block->frame->get_data(ret_val, slot.get_offset(), *val_size);
     }
+
+    if (trx_id > 0) {
+        // lock_t *lock = lock_acquire(table_id, leaf, key, trx_id, 0);
+        lock_t* lock = trx_acquire(table_id, leaf, key, trx_id, 0);
+        if (lock == nullptr) {
+            return_ctrl_block(&ctrl_block);
+            return -1;
+        }
+    }
+    *val_size = slot.get_size();
+    ctrl_block->frame->get_data(ret_val, slot.get_offset(), *val_size);
+
 
     return_ctrl_block(&ctrl_block);
     return 0;
@@ -1183,8 +1193,11 @@ int db_delete(int64_t table_id, int64_t key) {
 }
 
 int init_db(int num_buf) {
-    if(num_buf < 3) num_buf = 3;
-    buf_init_db(num_buf);
+    if (num_buf < 3) num_buf = 3;
+    int err = 0;
+    err += buf_init_db(num_buf);
+    err += init_lock_table();
+    err += trx_init();
     return 0;
 }
 
@@ -1235,4 +1248,26 @@ void db_print_tree(int64_t table_id) {
     // pagenum_t root_pagenum = PageIO::HeaderPage::get_root_pagenum(&header);
 
     // print_tree(table_id, root_pagenum);
+}
+
+/******************************************************************************/
+/*** Newly Implemented from Project 5 ****************************************/
+/******************************************************************************/
+
+int db_find(int64_t table_id, int64_t key, char* ret_val, uint16_t* val_size, int trx_id) {
+    control_block_t* header_ctrl_block = buf_read_page(table_id, 0);
+    // page_t header;
+    // file_read_page(table_id, 0, &header);
+    pagenum_t root_pagenum = PageIO::HeaderPage::get_root_pagenum(header_ctrl_block->frame);
+    return_ctrl_block(&header_ctrl_block);
+    int err = find(table_id, root_pagenum, key, ret_val, val_size, trx_id);
+
+    if (err != 0) {
+        trx_abort(trx_id);
+        return -1;
+    }
+    return 0;
+}
+int db_update(int64_t table_id, int64_t key, char* value, uint16_t val_size, uint16_t* old_val_size, int trx_id) {
+
 }

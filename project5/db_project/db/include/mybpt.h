@@ -16,7 +16,7 @@ constexpr uint64_t THRESHHOLD = 2500;
 // Find Operations
 
 pagenum_t find_leaf(int64_t table_id, pagenum_t root_pagenum, int64_t key);
-int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, uint16_t* val_size);
+int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, uint16_t* val_size, int trx_id);
 
 // Insertion
 
@@ -54,6 +54,10 @@ int init_db(int num_buf);
 int shutdown_db();
 
 void db_print_tree(int64_t table_id);
+
+// Newly Added API
+int db_find(int64_t table_id, int64_t key, char* ret_val, uint16_t* val_size, int trx_id);
+int db_update(int64_t table_id, int64_t key, char* value, uint16_t val_size, uint16_t* old_val_size, int trx_id);
 
 
 #endif // __MYBPT_H__
