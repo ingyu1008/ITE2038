@@ -63,7 +63,7 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
 
     if (trx_id > 0) {
         // lock_t *lock = lock_acquire(table_id, leaf, key, trx_id, 0);
-        lock_t* lock = trx_acquire(table_id, leaf, key, trx_id, 0);
+        lock_t* lock = trx_acquire(table_id, leaf, i, trx_id, 0);
         if (lock == nullptr) {
             return_ctrl_block(&ctrl_block);
             return -1;
@@ -1265,13 +1265,13 @@ int db_find(int64_t table_id, int64_t key, char* ret_val, uint16_t* val_size, in
     if (err < 0) {
         trx_abort(trx_id);
         return -1;
-    } else if(err == 1){
+    } else if (err == 1) {
         std::cout << "[DEBUG] Could not find record" << std::endl;
     }
     return 0;
 }
 
-int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, uint16_t val_size, uint16_t *old_val_size, int trx_id) {
+int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, uint16_t val_size, uint16_t* old_val_size, int trx_id) {
     pagenum_t leaf = find_leaf(table_id, root_pagenum, key);
 
     if (leaf == 0) return 1;
@@ -1291,17 +1291,18 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
         return 1;
     }
 
-    lock_t* lock = trx_acquire(table_id, leaf, key, trx_id, 1);
+    lock_t* lock = trx_acquire(table_id, leaf, i, trx_id, 1);
 
     *old_val_size = slot.get_size();
 
     ctrl_block->frame->set_data(value, slot.get_offset(), val_size);
 
-    if(lock == nullptr){
+    if (lock == nullptr) {
         return_ctrl_block(&ctrl_block);
         return -1;
     }
 
+    return_ctrl_block(&ctrl_block);
     return 0;
 }
 
@@ -1316,7 +1317,7 @@ int db_update(int64_t table_id, int64_t key, char* value, uint16_t val_size, uin
     if (err < 0) {
         trx_abort(trx_id);
         return -1;
-    } else if(err == 1){
+    } else if (err == 1) {
         std::cout << "[DEBUG] Could not find record" << std::endl;
     }
     return 0;

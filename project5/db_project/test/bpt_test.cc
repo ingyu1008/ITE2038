@@ -1,5 +1,6 @@
 #include "file.h"
 #include "mybpt.h"
+#include "trx.h"
 #include <random>
 
 #include <gtest/gtest.h>
