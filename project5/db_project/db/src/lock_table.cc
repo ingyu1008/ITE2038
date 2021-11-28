@@ -13,6 +13,14 @@ void print_locks(hash_table_entry_t *list){
 	}
 }
 
+void wake_up(hash_table_entry_t *list){
+	lock_t *lock = list->head;
+	while(lock != NULL){
+		pthread_cond_signal(&lock->lock_table_cond);
+		lock = lock->next;
+	}
+};
+
 bool conflict_exists(hash_table_entry_t* list, lock_t *lock){
 	return false;
 	// TODO implement
@@ -90,7 +98,7 @@ int lock_release(lock_t* lock_obj) {
 		list->tail = NULL;
 	}
 	if (next != NULL) {
-		pthread_cond_signal(&next->lock_table_cond);
+		wake_up(list);
 	}
 
 	int err = pthread_cond_destroy(&lock_obj->lock_table_cond);

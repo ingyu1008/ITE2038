@@ -1293,14 +1293,14 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
 
     lock_t* lock = trx_acquire(table_id, leaf, i, trx_id, 1);
 
-    *old_val_size = slot.get_size();
-
-    ctrl_block->frame->set_data(value, slot.get_offset(), val_size);
-
     if (lock == nullptr) {
         return_ctrl_block(&ctrl_block);
         return -1;
     }
+
+    *old_val_size = slot.get_size();
+
+    ctrl_block->frame->set_data(value, slot.get_offset(), val_size);
 
     return_ctrl_block(&ctrl_block);
     return 0;
