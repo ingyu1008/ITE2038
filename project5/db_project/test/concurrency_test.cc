@@ -17,7 +17,6 @@ TEST(ConcurrencyCtrl, OneTrxOneThread) {
     int table_id = open_table("singleThreaded.dat");
 
     int n = 100;
-    int x = 0;
 
     for (int i = 1; i <= n; i++) {
         std::cout << "[DEBUG] Inserting key = " << i << std::endl;
@@ -40,7 +39,28 @@ TEST(ConcurrencyCtrl, OneTrxOneThread) {
     }
 
     std::cout << "[INFO] Successfully found all " << n << " records." << std::endl;
-    
-    trx_commit(trx_id);
+
+    // trx_commit(trx_id);
+
+    std::cout << "[INFO] Trx successfully committed." << std::endl;
+
+    // trx_id = trx_begin();
+    // EXPECT_GT(trx_id, 0);
+
+    std::cout << "[INFO] Trx successfully begun, trx_id = " << trx_id << std::endl;
+
+    for (int i = 1; i <= n; i++) {
+        std::cout << "[DEBUG] Updating key = " << i << std::endl;
+        std::string data = "01234567890123456789012345678901234567890123456789" + std::to_string(i+1);
+        uint16_t old_val_size = 0;
+        int res = db_update(table_id, i, const_cast<char*>(data.c_str()), data.length(), &old_val_size, trx_id);
+        EXPECT_EQ(res, 0);
+        char buffer[MAX_VAL_SIZE];
+        db_find(table_id, i, buffer, &old_val_size, trx_id);
+        for(int j = 0; j < old_val_size; j++) {
+            EXPECT_EQ(buffer[j], data[j]);
+        }
+    }
+
     EXPECT_EQ(shutdown_db(), 0);
 }
