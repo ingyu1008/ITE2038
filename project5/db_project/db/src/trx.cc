@@ -15,7 +15,6 @@ lock_t* trx_acquire(int64_t table_id, pagenum_t pagenum, int64_t key, uint64_t t
 
     pthread_mutex_lock(&trx_table_latch);
     auto it = trx_table.find(trx_id);
-    std::cout << "[DEBUG] " << (it != trx_table.end()) << std::endl;
     if (it != trx_table.end()) {
         std::cout << "[DEBUG] Found trx with trx_id = " << trx_id << std::endl;
         trx_entry_t* trx_entry = it->second;
@@ -75,5 +74,5 @@ int trx_commit(int trx_id) {
         // pthread_mutex_destroy(trx_entry->trx_mutex); 
     }
     pthread_mutex_unlock(&trx_table_latch);
-    return 0;
+    return trx_id;
 }
