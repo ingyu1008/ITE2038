@@ -59,6 +59,7 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
 	lock->record_id = key;
 	lock->lock_mode = lock_mode;
 	lock->sentinel = list;
+	lock->trx_next = nullptr;
 	int err = pthread_cond_init(&lock->lock_table_cond, NULL);
 	if (err != 0) {
 		pthread_mutex_unlock(&lock_table_latch);
