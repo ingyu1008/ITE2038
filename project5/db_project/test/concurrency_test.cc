@@ -4,7 +4,7 @@
 #include <random>
 
 #include <gtest/gtest.h>
-#define BUF_SIZE 2048
+#define BUF_SIZE 5
 
 TEST(ConcurrencyCtrl, SingleThread) {
     EXPECT_EQ(init_db(BUF_SIZE), 0);
@@ -76,7 +76,7 @@ TEST(ConcurrencyCtrl, SingleThreadRandom) {
 
     int table_id = open_table("singleThreaded.dat");
 
-    int n = 100;
+    int n = 1000;
 
     for (int i = 1; i <= n; i++) {
         std::cout << "[DEBUG] Inserting key = " << i << std::endl;
@@ -105,9 +105,16 @@ TEST(ConcurrencyCtrl, SingleThreadRandom) {
     std::cout << "[INFO] Trx successfully committed." << std::endl;
 
 
-    std::vector<int64_t> v;
+    std::vector<std::pair<int, int64_t>> v;
     for (int64_t i = 1; i <= n; i++) {
-        v.push_back(i);
+        v.emplace_back(0, i);
+        v.emplace_back(0, i);
+        v.emplace_back(0, i);
+        v.emplace_back(0, i);
+        v.emplace_back(1, i);
+        v.emplace_back(1, i);
+        v.emplace_back(1, i);
+        v.emplace_back(1, i);
     }
 
     std::mt19937 gen(2020011776);
@@ -121,24 +128,21 @@ TEST(ConcurrencyCtrl, SingleThreadRandom) {
     char buffer[MAX_VAL_SIZE];
     int res;
 
-    for (auto& i : v) {
-        std::cout << "[DEBUG] Updating key = " << i << std::endl;
-        std::string old_data = "01234567890123456789012345678901234567890123456789" + std::to_string(i);
-        std::string data = "01234567890123456789012345678901234567890123456789" + std::to_string(i + 1);
+    for (auto& p : v) {
+        int i = p.second;
         uint16_t old_val_size = 0;
 
-        res = db_find(table_id, i, buffer, &old_val_size, trx_id);
-        EXPECT_EQ(res, 0);
-        for (int j = 0; j < old_val_size; j++) {
-            EXPECT_EQ(buffer[j], old_data[j]);
-        }
+        if (p.first == 1) {
+            std::cout << "[DEBUG] Updating key = " << i << std::endl;
+            std::string data = "12345678901234567890123456789012345678901234567890" + std::to_string(i);
 
-        res = db_update(table_id, i, const_cast<char*>(data.c_str()), data.length(), &old_val_size, trx_id);
-        EXPECT_EQ(res, 0);
-        res = db_find(table_id, i, buffer, &old_val_size, trx_id);
-        EXPECT_EQ(res, 0);
-        for (int j = 0; j < old_val_size; j++) {
-            EXPECT_EQ(buffer[j], data[j]);
+            res = db_find(table_id, i, buffer, &old_val_size, trx_id);
+            EXPECT_EQ(res, 0);
+            res = db_update(table_id, i, const_cast<char*>(data.c_str()), data.length(), &old_val_size, trx_id);
+            EXPECT_EQ(res, 0);
+        } else {
+            res = db_find(table_id, i, buffer, &old_val_size, trx_id);
+            EXPECT_EQ(res, 0);
         }
     }
 
@@ -152,7 +156,7 @@ void* thread_func(void* arg) {
     EXPECT_GT(trx_id, 0);
 
     int table_id = *((int*)arg);
-    int n = 100;
+    int n = 1000;
 
     int err = 0;
     uint16_t val_size;
@@ -181,7 +185,7 @@ TEST(ConcurrencyCtrl, SLockOnlyTest) {
 
     int table_id = open_table("SLockOnly.dat");
 
-    int n = 100;
+    int n = 1000;
 
     for (int i = 1; i <= n; i++) {
         std::cout << "[DEBUG] Inserting key = " << i << std::endl;
@@ -189,7 +193,7 @@ TEST(ConcurrencyCtrl, SLockOnlyTest) {
         int res = db_insert(table_id, i, const_cast<char*>(data.c_str()), data.length());
         EXPECT_EQ(res, 0);
     }
-    
+
 
     int m = 10;
     uint16_t val_size;

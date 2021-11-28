@@ -12,6 +12,47 @@ pthread_mutex_t buffer_manager_latch;
 int cache_hit = 0;
 int tot_read = 0;
 
+void print_buffer_info() {
+    std::cout << "[DEBUG] Buffer Info Begin" << std::endl;
+    for (auto p : pagemap) {
+        std::cout << p.second->pagenum << std::endl;
+    }
+    std::cout << "[DEBUG] Buffer Info End" << std::endl;
+}
+
+void double_buffer(int num_buf){
+    buffer.resize(num_buf*2);
+    buffer_ctrl_blocks.resize(num_buf*2);
+    for (int i = num_buf; i < 2*num_buf; i++) {
+        buffer[i] = (page_t*)malloc(sizeof(page_t));
+        buffer_ctrl_blocks[i] = (control_block_t*)malloc(sizeof(control_block_t));
+
+        if (buffer[i] == nullptr || buffer_ctrl_blocks[i] == nullptr) {
+            std::cout << "[FATAL] Memory Allocation Failed at " << __func__ << std::endl;
+            exit(EXIT_FAILURE);
+        }
+    }
+    for (int i = num_buf; i < 2*num_buf; i++) {
+        buffer_ctrl_blocks[i]->frame = buffer[i];
+        buffer_ctrl_blocks[i]->table_id = -1;
+        buffer_ctrl_blocks[i]->pagenum = 0;
+        buffer_ctrl_blocks[i]->is_dirty = 0;
+        buffer_ctrl_blocks[i]->is_pinned = 0;
+        buffer_ctrl_blocks[i]->next = buffer_ctrl_blocks[(i + 2*num_buf - 1) % (2*num_buf)];
+        buffer_ctrl_blocks[i]->prev = buffer_ctrl_blocks[(i + 1) % (2*num_buf)];
+    }
+
+    std::cout << "Doubled!" << std::endl;
+    num_buf *= 2;
+    buffer_ctrl_blocks[num_buf/2]->prev = victim;
+    victim->next = buffer_ctrl_blocks[num_buf/2];
+
+    buffer_ctrl_blocks[num_buf-1]->prev = victim->prev;
+    victim->prev->next = buffer_ctrl_blocks[num_buf-1];
+
+    victim = buffer_ctrl_blocks[num_buf/2];
+}
+
 void move_to_beg_of_list(control_block_t* cur) {
     if (cur == victim) {
         victim = victim->prev;
@@ -43,8 +84,12 @@ control_block_t* find_victim() {
     while (cur->is_pinned > 0) {
         cur = cur->prev;
         if (cur == victim) {
+
+            print_buffer_info();
             std::cout << "[FATAL] Buffer Full" << std::endl;
-            exit(EXIT_FAILURE);
+            // exit(EXIT_FAILURE);
+            double_buffer(buffer.size());
+            return victim;
         }
     }
     return cur;
@@ -53,6 +98,7 @@ control_block_t* find_victim() {
 // Add a new page to the buffer
 // If the buffer is full, replace the least recently used page
 control_block_t* add_new_page(int64_t table_id, pagenum_t page_number) {
+    pthread_mutex_lock(&buffer_manager_latch);
     control_block_t* cur = find_victim();
 
     if (cur->is_dirty) {
@@ -67,7 +113,7 @@ control_block_t* add_new_page(int64_t table_id, pagenum_t page_number) {
     cur->table_id = table_id;
     cur->pagenum = page_number;
     cur->is_pinned++;
-
+    pthread_mutex_unlock(&buffer_manager_latch);
     return cur;
 }
 
@@ -134,6 +180,7 @@ pagenum_t buf_alloc_page(int64_t table_id) {
 
     if (header_ctrl_block == nullptr) {
         pagenum_t pagenum = file_alloc_page(table_id);
+        pthread_mutex_unlock(&buffer_manager_latch);
         return pagenum;
     }
 
@@ -170,6 +217,7 @@ void buf_free_page(int64_t table_id, pagenum_t page_number)
     if (cur == nullptr) {
         // Simple case: just free it
         free_page(table_id, page_number);
+        pthread_mutex_unlock(&buffer_manager_latch);
         return;
     }
 
