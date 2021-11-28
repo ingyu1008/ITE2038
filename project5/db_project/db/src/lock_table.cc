@@ -14,6 +14,8 @@ void print_locks(hash_table_entry_t *list){
 }
 
 bool conflict_exists(hash_table_entry_t* list, lock_t *lock){
+	return false;
+	// TODO implement
 	lock_t* curr = list->head;
 	while(curr != NULL){
 		if(curr->trx_id != lock->trx_id && curr->record_id == lock->record_id && (lock->lock_mode | curr->lock_mode) == 1 && curr != lock){
