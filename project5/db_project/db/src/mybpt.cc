@@ -44,7 +44,7 @@ pagenum_t find_leaf(int64_t table_id, pagenum_t root_pagenum, int64_t key) {
 int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, uint16_t* val_size, int trx_id = 0) {
     pagenum_t leaf = find_leaf(table_id, root_pagenum, key);
 
-    if (leaf == 0) return -1;
+    if (leaf == 0) return 1;
 
     control_block_t* ctrl_block = buf_read_page(table_id, leaf);
     // file_read_page(table_id, leaf, &page);
@@ -58,7 +58,7 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
     }
     if (i == num_keys) {
         return_ctrl_block(&ctrl_block);
-        return -1;
+        return 1;
     }
 
     if (trx_id > 0) {
@@ -1262,12 +1262,62 @@ int db_find(int64_t table_id, int64_t key, char* ret_val, uint16_t* val_size, in
     return_ctrl_block(&header_ctrl_block);
     int err = find(table_id, root_pagenum, key, ret_val, val_size, trx_id);
 
-    if (err != 0) {
+    if (err < 0) {
         trx_abort(trx_id);
         return -1;
+    } else if(err == 1){
+        std::cout << "[DEBUG] Could not find record" << std::endl;
     }
     return 0;
 }
-int db_update(int64_t table_id, int64_t key, char* value, uint16_t val_size, uint16_t* old_val_size, int trx_id) {
 
+int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, uint16_t val_size, uint16_t *old_val_size, int trx_id) {
+    pagenum_t leaf = find_leaf(table_id, root_pagenum, key);
+
+    if (leaf == 0) return 1;
+
+    control_block_t* ctrl_block = buf_read_page(table_id, leaf);
+    // file_read_page(table_id, leaf, &page);
+
+    int num_keys = PageIO::BPT::get_num_keys(ctrl_block->frame);
+    int i;
+    slot_t slot;
+    for (i = 0; i < num_keys; i++) {
+        slot = PageIO::BPT::LeafPage::get_nth_slot(ctrl_block->frame, i);
+        if (slot.get_key() == key) break;
+    }
+    if (i == num_keys) {
+        return_ctrl_block(&ctrl_block);
+        return 1;
+    }
+
+    lock_t* lock = trx_acquire(table_id, leaf, key, trx_id, 1);
+
+    *old_val_size = slot.get_size();
+
+    ctrl_block->frame->set_data(value, slot.get_offset(), val_size);
+
+    if(lock == nullptr){
+        return_ctrl_block(&ctrl_block);
+        return -1;
+    }
+
+    return 0;
+}
+
+int db_update(int64_t table_id, int64_t key, char* value, uint16_t val_size, uint16_t* old_val_size, int trx_id) {
+    control_block_t* header_ctrl_block = buf_read_page(table_id, 0);
+    // page_t header;
+    // file_read_page(table_id, 0, &header);
+    pagenum_t root_pagenum = PageIO::HeaderPage::get_root_pagenum(header_ctrl_block->frame);
+    return_ctrl_block(&header_ctrl_block);
+    int err = update(table_id, root_pagenum, key, value, val_size, old_val_size, trx_id);
+
+    if (err < 0) {
+        trx_abort(trx_id);
+        return -1;
+    } else if(err == 1){
+        std::cout << "[DEBUG] Could not find record" << std::endl;
+    }
+    return 0;
 }
