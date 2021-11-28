@@ -7,6 +7,8 @@ std::vector<page_t*> buffer;
 control_block_t* victim = nullptr; // tail of the linked list, first one on the list is the most recent;
 std::map<std::pair<int64_t, pagenum_t>, control_block_t*> pagemap;
 
+pthread_mutex_t buffer_manager_latch;
+
 int cache_hit = 0;
 int tot_read = 0;
 
@@ -86,10 +88,12 @@ void free_page(int64_t table_id, pagenum_t page_number) {
 }
 
 void return_ctrl_block(control_block_t** ctrl_block, int is_dirty) {
+    pthread_mutex_lock(&buffer_manager_latch);
     if (ctrl_block == nullptr || (*ctrl_block) == nullptr) return;
     (*ctrl_block)->is_pinned--;
     (*ctrl_block)->is_dirty |= is_dirty;
     (*ctrl_block) = nullptr;
+    pthread_mutex_unlock(&buffer_manager_latch);
 }
 
 /* Calls file_open_table_file and maps table_id with table index.
@@ -105,11 +109,13 @@ int64_t buf_open_table_file(const char* pathname) {
  * Eviction of victim page can occur if page required is not on the buffer.
  */
 control_block_t* buf_read_page(int64_t table_id, pagenum_t page_number) {
+    pthread_mutex_lock(&buffer_manager_latch);
     tot_read++;
 
     control_block_t* cur = find_buffer(table_id, page_number);//pagemap[std::make_pair(table_id, page_number)];
 
     if (cur == nullptr) {
+        pthread_mutex_unlock(&buffer_manager_latch);
         return add_new_page(table_id, page_number);
     }
 
@@ -117,11 +123,13 @@ control_block_t* buf_read_page(int64_t table_id, pagenum_t page_number) {
     move_to_beg_of_list(cur);
 
     cur->is_pinned++;
+    pthread_mutex_unlock(&buffer_manager_latch);
     return cur;
 }
 
 
 pagenum_t buf_alloc_page(int64_t table_id) {
+    pthread_mutex_lock(&buffer_manager_latch);
     control_block_t* header_ctrl_block = find_buffer(table_id, 0);
 
     if (header_ctrl_block == nullptr) {
@@ -151,11 +159,13 @@ pagenum_t buf_alloc_page(int64_t table_id) {
     PageIO::HeaderPage::set_free_pagenum(header_ctrl_block->frame, PageIO::FreePage::get_next_free_pagenum(&page));
 
     header_ctrl_block->is_dirty |= 1;
+    pthread_mutex_unlock(&buffer_manager_latch);
     return pagenum;
 }
 
 void buf_free_page(int64_t table_id, pagenum_t page_number)
 {
+    pthread_mutex_lock(&buffer_manager_latch);
     control_block_t* cur = find_buffer(table_id, page_number); //pagemap[std::make_pair(table_id, page_number)];
     if (cur == nullptr) {
         // Simple case: just free it
@@ -181,6 +191,7 @@ void buf_free_page(int64_t table_id, pagenum_t page_number)
     cur->is_pinned = 0;
 
     free_page(table_id, page_number);
+    pthread_mutex_unlock(&buffer_manager_latch);
 }
 
 /* Initialzer for buffer and buffer control blocks.
@@ -213,6 +224,7 @@ int buf_init_db(int num_buf) {
     }
 
     victim = buffer_ctrl_blocks[0];
+    buffer_manager_latch = PTHREAD_MUTEX_INITIALIZER;
     return 0;
 }
 

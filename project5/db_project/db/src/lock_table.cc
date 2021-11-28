@@ -76,7 +76,7 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
 	while (conflict_exists(list, lock)) {
 		pthread_cond_wait(&lock->lock_table_cond, &lock_table_latch);
 	}
-	print_locks(list);
+	// print_locks(list);
 	pthread_mutex_unlock(&lock_table_latch);
 	return lock;
 };

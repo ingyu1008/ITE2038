@@ -194,11 +194,11 @@ TEST(ConcurrencyCtrl, SLockOnlyTest) {
     int m = 10;
     uint16_t val_size;
     pthread_t threads[m];
-    pthread_attr_t attr;
-    pthread_attr_setstacksize(&attr, 128 * 1024 * 1024);
+    // pthread_attr_t attr;
+    // pthread_attr_setstacksize(&attr, 128 * 1024 * 1024);
     for (int i = 0; i < m; i++) {
         std::cout << "[DEBUG] Create thread " << i << std::endl;
-        pthread_create(&threads[i], &attr, thread_func, &table_id);
+        pthread_create(&threads[i], NULL, thread_func, &table_id);
     }
 
     for (int i = 0; i < m; i++) {

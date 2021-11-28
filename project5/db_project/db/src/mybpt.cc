@@ -72,8 +72,6 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
     *val_size = slot.get_size();
     ctrl_block->frame->get_data(ret_val, slot.get_offset(), slot.get_size());
 
-
-
     return_ctrl_block(&ctrl_block);
     return 0;
 }
