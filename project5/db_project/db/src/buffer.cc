@@ -43,14 +43,15 @@ void double_buffer(int num_buf){
     }
 
     std::cout << "Doubled!" << std::endl;
+    buffer_ctrl_blocks[num_buf]->next = victim->next;
+    victim->next->prev = buffer_ctrl_blocks[num_buf];
+
+    buffer_ctrl_blocks[num_buf*2 - 1]->prev = victim;
+    victim->next = buffer_ctrl_blocks[num_buf*2 - 1];
+
+
+    victim = buffer_ctrl_blocks[num_buf];
     num_buf *= 2;
-    buffer_ctrl_blocks[num_buf/2]->prev = victim;
-    victim->next = buffer_ctrl_blocks[num_buf/2];
-
-    buffer_ctrl_blocks[num_buf-1]->prev = victim->prev;
-    victim->prev->next = buffer_ctrl_blocks[num_buf-1];
-
-    victim = buffer_ctrl_blocks[num_buf/2];
 }
 
 void move_to_beg_of_list(control_block_t* cur) {
