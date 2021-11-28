@@ -68,8 +68,9 @@ int trx_commit(int trx_id) {
         trx_entry_t* trx_entry = it->second;
         lock_t* lock = trx_entry->lock;
         while (lock != NULL) {
+            lock_t* tmp = lock->trx_next;
             lock_release(lock);
-            lock = lock->next;
+            lock = tmp;
         }
         // pthread_mutex_destroy(trx_entry->trx_mutex); 
     }

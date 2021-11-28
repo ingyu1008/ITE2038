@@ -40,12 +40,12 @@ TEST(ConcurrencyCtrl, OneTrxOneThread) {
 
     std::cout << "[INFO] Successfully found all " << n << " records." << std::endl;
 
-    // trx_commit(trx_id);
+    trx_commit(trx_id);
 
     std::cout << "[INFO] Trx successfully committed." << std::endl;
 
-    // trx_id = trx_begin();
-    // EXPECT_GT(trx_id, 0);
+    trx_id = trx_begin();
+    EXPECT_GT(trx_id, 0);
 
     std::cout << "[INFO] Trx successfully begun, trx_id = " << trx_id << std::endl;
 
