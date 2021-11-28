@@ -142,5 +142,68 @@ TEST(ConcurrencyCtrl, SingleThreadRandom) {
         }
     }
 
+    trx_commit(trx_id);
+
+    EXPECT_EQ(shutdown_db(), 0);
+}
+
+void* thread_func(void* arg) {
+    int trx_id = trx_begin();
+    EXPECT_GT(trx_id, 0);
+
+    int table_id = *((int*)arg);
+    int n = 100;
+
+    int err = 0;
+    uint16_t val_size;
+    for (int i = 1; i <= n; i++) {
+        char ret_val[112];
+        std::string data = "01234567890123456789012345678901234567890123456789" + std::to_string(i);
+
+        int res = db_find(table_id, i, ret_val, &val_size, trx_id);
+        EXPECT_EQ(res, 0);
+        for (int j = 0; j < val_size; j++) {
+            EXPECT_EQ(ret_val[j], data[j]);
+        }
+    }
+
+    trx_commit(trx_id);
+    return NULL;
+}
+
+TEST(ConcurrencyCtrl, SLockOnlyTest) {
+    EXPECT_EQ(init_db(BUF_SIZE), 0);
+
+    if (std::remove("SLockOnly.dat") == 0)
+    {
+        std::cout << "[INFO] File 'SLockOnly.dat' already exists. Deleting it." << std::endl;
+    }
+
+    int table_id = open_table("SLockOnly.dat");
+
+    int n = 100;
+
+    for (int i = 1; i <= n; i++) {
+        std::cout << "[DEBUG] Inserting key = " << i << std::endl;
+        std::string data = "01234567890123456789012345678901234567890123456789" + std::to_string(i);
+        int res = db_insert(table_id, i, const_cast<char*>(data.c_str()), data.length());
+        EXPECT_EQ(res, 0);
+    }
+    
+
+    int m = 10;
+    uint16_t val_size;
+    pthread_t threads[m];
+    pthread_attr_t attr;
+    pthread_attr_setstacksize(&attr, 128 * 1024 * 1024);
+    for (int i = 0; i < m; i++) {
+        std::cout << "[DEBUG] Create thread " << i << std::endl;
+        pthread_create(&threads[i], &attr, thread_func, &table_id);
+    }
+
+    for (int i = 0; i < m; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
     EXPECT_EQ(shutdown_db(), 0);
 }

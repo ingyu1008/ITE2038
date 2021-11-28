@@ -70,7 +70,8 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
         }
     }
     *val_size = slot.get_size();
-    ctrl_block->frame->get_data(ret_val, slot.get_offset(), *val_size);
+    ctrl_block->frame->get_data(ret_val, slot.get_offset(), slot.get_size());
+
 
 
     return_ctrl_block(&ctrl_block);
@@ -1266,7 +1267,7 @@ int db_find(int64_t table_id, int64_t key, char* ret_val, uint16_t* val_size, in
         trx_abort(trx_id);
         return -1;
     } else if (err == 1) {
-        std::cout << "[DEBUG] Could not find record" << std::endl;
+        std::cout << "[DEBUG] Could not find record key = " << key << ", trx_id = " << trx_id << std::endl;
     }
     return 0;
 }
@@ -1318,7 +1319,7 @@ int db_update(int64_t table_id, int64_t key, char* value, uint16_t val_size, uin
         trx_abort(trx_id);
         return -1;
     } else if (err == 1) {
-        std::cout << "[DEBUG] Could not find record" << std::endl;
+        std::cout << "[DEBUG] Could not find record key=" << key << std::endl;
     }
     return 0;
 }

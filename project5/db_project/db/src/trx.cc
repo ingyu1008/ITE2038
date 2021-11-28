@@ -5,6 +5,7 @@ struct trx_entry_t {
     // pthread_mutex_t trx_mutex; // Not needed for project 5
     lock_t* lock;
 };
+uint64_t trx_id = 1;
 
 pthread_mutex_t trx_table_latch;
 
@@ -39,10 +40,8 @@ int trx_init() {
 }
 
 int trx_begin(void) {
-    static uint64_t trx_id = 1;
-
-
     pthread_mutex_lock(&trx_table_latch);
+    std::cout << "[DEBUG] trx_begin trx_id = " << trx_id << std::endl;
     trx_entry_t* trx_entry = new trx_entry_t();
     if (trx_entry != nullptr) {
         trx_entry->trx_id = trx_id++;
