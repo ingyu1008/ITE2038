@@ -62,14 +62,15 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
         return 1;
     }
 
-    if (trx_id > 0) {
-        // lock_t *lock = lock_acquire(table_id, leaf, key, trx_id, 0);
-        lock_t* lock = trx_acquire(table_id, leaf, i, trx_id, 0);
-        if (lock == nullptr) {
-            return_ctrl_block(&ctrl_block);
-            return -1;
-        }
-    }
+    // if (trx_id > 0) {
+    //     // lock_t *lock = lock_acquire(table_id, leaf, key, trx_id, 0);
+    //     lock_t* lock = trx_acquire(table_id, leaf, i, trx_id, 0);
+    //     if (lock == nullptr) {
+    //         return_ctrl_block(&ctrl_block);
+    //         return -1;
+    //     }
+    // }
+
     *val_size = slot.get_size();
     ctrl_block->frame->get_data(ret_val, slot.get_offset(), slot.get_size());
 
@@ -1131,7 +1132,8 @@ namespace Util {
 int64_t open_table(char* pathname) {
     if (Util::opened_tables.find(std::string(pathname)) != Util::opened_tables.end()) {
         return -1;
-    } else if (Util::opened_tables.size() == 19) { // Total number of tables is less than 20
+    }
+    if (Util::opened_tables.size() == 19) { // Total number of tables is less than 20
         return -1;
     }
 
@@ -1295,12 +1297,12 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
         return 1;
     }
 
-    lock_t* lock = trx_acquire(table_id, leaf, i, trx_id, 1);
+    // lock_t* lock = trx_acquire(table_id, leaf, i, trx_id, 1);
 
-    if (lock == nullptr) {
-        return_ctrl_block(&ctrl_block);
-        return -1;
-    }
+    // if (lock == nullptr) {
+    //     return_ctrl_block(&ctrl_block);
+    //     return -1;
+    // }
 
     *old_val_size = slot.get_size();
 
