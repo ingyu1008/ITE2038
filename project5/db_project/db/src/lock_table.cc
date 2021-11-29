@@ -101,7 +101,7 @@ int lock_release(lock_t* lock_obj) {
 		list->tail = NULL;
 	}
 	if (next != NULL) {
-		wake_up(list);
+		// wake_up(list);
 	}
 	delete lock_obj;
 	pthread_mutex_unlock(&lock_table_latch);

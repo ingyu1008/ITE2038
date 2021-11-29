@@ -33,18 +33,18 @@ void print_trx_list(int trx_id) {
 lock_t* trx_get_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t trx_id, int lock_mode) {
     lock_t* lock = nullptr;
 
-    auto it = trx_table.find(trx_id);
-    if (it != trx_table.end()) {
-        trx_entry_t* trx_entry = it->second;
-        lock_t* temp_lock = trx_entry->lock;
-        while (temp_lock != nullptr) {
-            if (temp_lock->trx_id == trx_id && temp_lock->sentinel->table_id == table_id && temp_lock->sentinel->page_id == pagenum && temp_lock->record_id == key && temp_lock->lock_mode == lock_mode) {
-                lock = temp_lock;
-                break;
-            }
-            temp_lock = temp_lock->trx_next;
-        }
-    }
+    // auto it = trx_table.find(trx_id);
+    // if (it != trx_table.end()) {
+    //     trx_entry_t* trx_entry = it->second;
+    //     lock_t* temp_lock = trx_entry->lock;
+    //     while (temp_lock != nullptr) {
+    //         if (temp_lock->trx_id == trx_id && temp_lock->sentinel->table_id == table_id && temp_lock->sentinel->page_id == pagenum && temp_lock->record_id == key && temp_lock->lock_mode == lock_mode) {
+    //             lock = temp_lock;
+    //             break;
+    //         }
+    //         temp_lock = temp_lock->trx_next;
+    //     }
+    // }
 
     return lock;
 }
