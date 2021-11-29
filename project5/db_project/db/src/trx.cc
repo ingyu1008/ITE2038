@@ -139,7 +139,7 @@ int trx_commit(int trx_id) {
     if (it != trx_table.end()) {
         trx_entry_t* trx_entry = it->second;
         lock_t* lock = trx_entry->lock;
-        while (lock != NULL) {
+        while (lock != nullptr) {
             lock_t* tmp = lock->trx_next;
             lock_release(lock);
             lock = tmp;

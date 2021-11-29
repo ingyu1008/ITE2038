@@ -4,7 +4,7 @@
 #include <random>
 
 #include <gtest/gtest.h>
-#define BUF_SIZE 5
+#define BUF_SIZE 30
 #define DEBUG_MODE 0
 
 TEST(ConcurrencyCtrl, SingleThread) {
@@ -81,7 +81,7 @@ TEST(ConcurrencyCtrl, SingleThreadRandom) {
 
     int table_id = open_table("singleThreaded.dat");
 
-    int n = 1000;
+    int n = 100000;
 
     for (int i = 1; i <= n; i++) {
         #if DEBUG_MODE
@@ -171,18 +171,27 @@ void* thread_func(void* arg) {
     EXPECT_GT(trx_id, 0);
 
     int table_id = *((int*)arg);
-    int n = 10000;
+    int n = 100000;
 
     int err = 0;
     uint16_t val_size;
     for (int i = 1; i <= n; i++) {
-        char ret_val[112];
+        char ret_val[112] = "\0";
         std::string data = "01234567890123456789012345678901234567890123456789" + std::to_string(i);
 
         int res = db_find(table_id, i, ret_val, &val_size, trx_id);
         EXPECT_EQ(res, 0);
+        int diff = 0;
         for (int j = 0; j < val_size; j++) {
-            EXPECT_EQ(ret_val[j], data[j]);
+            diff += ret_val[j] != data[j];
+        }
+        if(diff){
+            std::cout << "[ERROR] at i = " << i << " trx_id = " << trx_id << std::endl;
+            std::cout << ret_val << std::endl;
+            std::cout << data << std::endl;
+            break;
+        } else {
+            std::cout << "[INFO] ok at i = " << i << " trx_id = " << trx_id << std::endl;
         }
     }
 
@@ -200,7 +209,7 @@ TEST(ConcurrencyCtrl, SLockOnlyTest) {
 
     int table_id = open_table("SLockOnly.dat");
 
-    int n = 10000;
+    int n = 100000;
 
     for (int i = 1; i <= n; i++) {
         #if DEBUG_MODE
@@ -211,6 +220,7 @@ TEST(ConcurrencyCtrl, SLockOnlyTest) {
         EXPECT_EQ(res, 0);
     }
 
+    std::cout << "[INFO] Population done, now testing SLockOnly Test" << std::endl;
 
     int m = 10;
     uint16_t val_size;

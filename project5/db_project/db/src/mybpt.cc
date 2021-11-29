@@ -43,6 +43,9 @@ pagenum_t find_leaf(int64_t table_id, pagenum_t root_pagenum, int64_t key) {
 }
 
 int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, uint16_t* val_size, int trx_id = 0) {
+    #if DEBUG_MODE
+    std::cout << "[INFO] find() called. key = " << key << std::endl;
+    #endif
     pagenum_t leaf = find_leaf(table_id, root_pagenum, key);
 
     if (leaf == 0) return 1;
@@ -62,13 +65,16 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
         return 1;
     }
 
+
     if (trx_id > 0) {
+        return_ctrl_block(&ctrl_block);
+        // std::cout << "[DEBUG] Page acquired: " << leaf << " by trx_id = " << trx_id << std::endl;
         // lock_t *lock = lock_acquire(table_id, leaf, key, trx_id, 0);
         lock_t* lock = trx_acquire(table_id, leaf, i, trx_id, 0);
         if (lock == nullptr) {
-            return_ctrl_block(&ctrl_block);
             return -1;
         }
+        ctrl_block = buf_read_page(table_id, leaf);
     }
 
     *val_size = slot.get_size();

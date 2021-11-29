@@ -17,46 +17,48 @@ void print_buffer_info() {
     #if DEBUG_MODE
     std::cout << "[DEBUG] Buffer Info Begin" << std::endl;
     for (auto p : pagemap) {
-        std::cout << p.second->pagenum << std::endl;
+        std::cout << "pagenum = " << p.second->pagenum << ", pin_count = " << p.second->is_pinned << std::endl;
     }
     std::cout << "[DEBUG] Buffer Info End" << std::endl;
     #endif
 }
 
 void double_buffer(int num_buf) {
-    buffer.resize(num_buf * 2);
-    buffer_ctrl_blocks.resize(num_buf * 2);
-    for (int i = num_buf; i < 2 * num_buf; i++) {
-        buffer[i] = (page_t*)malloc(sizeof(page_t));
-        buffer_ctrl_blocks[i] = (control_block_t*)malloc(sizeof(control_block_t));
+    std::cout << "[DEBUG] Double Buffer Deprecated" << std::endl;
+    // buffer.resize(num_buf * 2);
+    // buffer_ctrl_blocks.resize(num_buf * 2);
+    // for (int i = num_buf; i < 2 * num_buf; i++) {
+    //     buffer[i] = (page_t*)malloc(sizeof(page_t));
+    //     buffer_ctrl_blocks[i] = (control_block_t*)malloc(sizeof(control_block_t));
 
-        if (buffer[i] == nullptr || buffer_ctrl_blocks[i] == nullptr) {
-            std::cout << "[FATAL] Memory Allocation Failed at " << __func__ << std::endl;
-            exit(EXIT_FAILURE);
-        }
-    }
-    for (int i = num_buf; i < 2 * num_buf; i++) {
-        buffer_ctrl_blocks[i]->frame = buffer[i];
-        buffer_ctrl_blocks[i]->table_id = -1;
-        buffer_ctrl_blocks[i]->pagenum = 0;
-        buffer_ctrl_blocks[i]->is_dirty = 0;
-        buffer_ctrl_blocks[i]->is_pinned = 0;
-        buffer_ctrl_blocks[i]->next = buffer_ctrl_blocks[(i + 2 * num_buf - 1) % (2 * num_buf)];
-        buffer_ctrl_blocks[i]->prev = buffer_ctrl_blocks[(i + 1) % (2 * num_buf)];
-    }
+    //     if (buffer[i] == nullptr || buffer_ctrl_blocks[i] == nullptr) {
+    //         std::cout << "[FATAL] Memory Allocation Failed at " << __func__ << std::endl;
+    //         exit(EXIT_FAILURE);
+    //     }
+    // }
+    // for (int i = num_buf; i < 2 * num_buf; i++) {
+    //     buffer_ctrl_blocks[i]->frame = buffer[i];
+    //     buffer_ctrl_blocks[i]->table_id = -1;
+    //     buffer_ctrl_blocks[i]->pagenum = 0;
+    //     buffer_ctrl_blocks[i]->is_dirty = 0;
+    //     buffer_ctrl_blocks[i]->is_pinned = 0;
+    //     buffer_ctrl_blocks[i]->page_latch = PTHREAD_MUTEX_INITIALIZER;
+    //     buffer_ctrl_blocks[i]->next = buffer_ctrl_blocks[(i + 2 * num_buf - 1) % (2 * num_buf)];
+    //     buffer_ctrl_blocks[i]->prev = buffer_ctrl_blocks[(i + 1) % (2 * num_buf)];
+    // }
 
-    #if DEBUG_MODE
-    std::cout << "Doubled!" << std::endl;
-    #endif
-    buffer_ctrl_blocks[num_buf]->next = victim->next;
-    victim->next->prev = buffer_ctrl_blocks[num_buf];
+    // #if DEBUG_MODE
+    // std::cout << "Doubled!" << std::endl;
+    // #endif
+    // buffer_ctrl_blocks[num_buf]->next = victim->next;
+    // victim->next->prev = buffer_ctrl_blocks[num_buf];
 
-    buffer_ctrl_blocks[num_buf * 2 - 1]->prev = victim;
-    victim->next = buffer_ctrl_blocks[num_buf * 2 - 1];
+    // buffer_ctrl_blocks[num_buf * 2 - 1]->prev = victim;
+    // victim->next = buffer_ctrl_blocks[num_buf * 2 - 1];
 
 
-    victim = buffer_ctrl_blocks[num_buf];
-    num_buf *= 2;
+    // victim = buffer_ctrl_blocks[num_buf];
+    // num_buf *= 2;
 }
 
 void move_to_beg_of_list(control_block_t* cur) {
@@ -87,27 +89,27 @@ control_block_t* find_buffer(int64_t table_id, pagenum_t page_number) {
 // Skip the ones that are pinned.
 control_block_t* find_victim() {
     control_block_t* cur = victim;
-    while (cur->is_pinned > 0) {
-        cur = cur->prev;
-        if (cur == victim) {
+    pthread_mutex_lock(&cur->page_latch);
+    // while (cur->is_pinned > 0) {
+    //     cur = cur->prev;
+    //     if (cur == victim) {
 
-            print_buffer_info();
+    //         print_buffer_info();
             
-            #if DEBUG_MODE
-            std::cout << "[FATAL] Buffer Full" << std::endl;
-            #endif
-            // exit(EXIT_FAILURE);
-            double_buffer(buffer.size());
-            return victim;
-        }
-    }
+    //         #if DEBUG_MODE
+    //         std::cout << "[FATAL] Buffer Full" << std::endl;
+    //         #endif
+    //         // exit(EXIT_FAILURE);
+    //         double_buffer(buffer.size());
+    //         return victim;
+    //     }
+    // }
     return cur;
 }
 
 // Add a new page to the buffer
 // If the buffer is full, replace the least recently used page
 control_block_t* add_new_page(int64_t table_id, pagenum_t page_number) {
-    pthread_mutex_lock(&buffer_manager_latch);
     control_block_t* cur = find_victim();
 
     if (cur->is_dirty) {
@@ -116,13 +118,13 @@ control_block_t* add_new_page(int64_t table_id, pagenum_t page_number) {
     if (cur->table_id >= 0)
         pagemap.erase(std::make_pair(cur->table_id, cur->pagenum));
     move_to_beg_of_list(cur);
+    pthread_mutex_unlock(&buffer_manager_latch);
 
     file_read_page(table_id, page_number, cur->frame);
     pagemap.emplace(std::make_pair(table_id, page_number), cur);
     cur->table_id = table_id;
     cur->pagenum = page_number;
     cur->is_pinned++;
-    pthread_mutex_unlock(&buffer_manager_latch);
     return cur;
 }
 
@@ -143,12 +145,12 @@ void free_page(int64_t table_id, pagenum_t page_number) {
 }
 
 void return_ctrl_block(control_block_t** ctrl_block, int is_dirty) {
-    pthread_mutex_lock(&buffer_manager_latch);
     if (ctrl_block == nullptr || (*ctrl_block) == nullptr) return;
     (*ctrl_block)->is_pinned--;
     (*ctrl_block)->is_dirty |= is_dirty;
+    control_block_t* tmp = *ctrl_block;
     (*ctrl_block) = nullptr;
-    pthread_mutex_unlock(&buffer_manager_latch);
+    pthread_mutex_unlock(&(tmp->page_latch));
 }
 
 /* Calls file_open_table_file and maps table_id with table index.
@@ -165,18 +167,23 @@ int64_t buf_open_table_file(const char* pathname) {
  */
 control_block_t* buf_read_page(int64_t table_id, pagenum_t page_number) {
     pthread_mutex_lock(&buffer_manager_latch);
+    #if DEBUG_MODE
+    std::cout << "Read Page: " << table_id << " " << page_number << std::endl;
+    print_buffer_info();
+    #endif
     tot_read++;
 
     control_block_t* cur = find_buffer(table_id, page_number);//pagemap[std::make_pair(table_id, page_number)];
 
     if (cur == nullptr) {
-        pthread_mutex_unlock(&buffer_manager_latch);
         return add_new_page(table_id, page_number);
     }
+
 
     cache_hit++;
     move_to_beg_of_list(cur);
 
+    pthread_mutex_lock(&cur->page_latch);
     cur->is_pinned++;
     pthread_mutex_unlock(&buffer_manager_latch);
     return cur;
@@ -276,6 +283,7 @@ int buf_init_db(int num_buf) {
         buffer_ctrl_blocks[i]->pagenum = 0;
         buffer_ctrl_blocks[i]->is_dirty = 0;
         buffer_ctrl_blocks[i]->is_pinned = 0;
+        buffer_ctrl_blocks[i]->page_latch = PTHREAD_MUTEX_INITIALIZER;
         buffer_ctrl_blocks[i]->next = buffer_ctrl_blocks[(i + num_buf - 1) % num_buf];
         buffer_ctrl_blocks[i]->prev = buffer_ctrl_blocks[(i + 1) % num_buf];
     }
