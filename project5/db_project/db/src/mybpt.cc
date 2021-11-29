@@ -21,12 +21,29 @@ pagenum_t find_leaf(int64_t table_id, pagenum_t root_pagenum, int64_t key) {
     while (PageIO::BPT::get_is_leaf(ctrl_block->frame) == 0) // While the page is internal
     {
         int num_keys = PageIO::BPT::get_num_keys(ctrl_block->frame);
-        int i;
-        for (i = 0; i < num_keys; i++) {
-            if (key < PageIO::BPT::InternalPage::get_nth_branch_factor(ctrl_block->frame, i).get_key()) {
+        int i = num_keys;
+        // for (i = 0; i < num_keys; i++) {
+        //     if (key < PageIO::BPT::InternalPage::get_nth_branch_factor(ctrl_block->frame, i).get_key()) {
+        //         break;
+        //     }
+        // }
+
+        int lo = 0;
+        int hi = num_keys - 1;
+        while(lo <= hi){
+            int mid = (lo + hi) / 2;
+            if(PageIO::BPT::InternalPage::get_nth_branch_factor(ctrl_block->frame, mid).get_key() == key){
+                i = mid;
                 break;
             }
+            else if(PageIO::BPT::InternalPage::get_nth_branch_factor(ctrl_block->frame, mid).get_key() < key){
+                lo = mid + 1;
+            }
+            else{
+                hi = mid - 1;
+            }
         }
+
         if (i == 0) {
             cur = PageIO::BPT::InternalPage::get_leftmost_pagenum(ctrl_block->frame);
         } else {
@@ -54,12 +71,30 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
     // file_read_page(table_id, leaf, &page);
 
     int num_keys = PageIO::BPT::get_num_keys(ctrl_block->frame);
-    int i;
+    int i = num_keys;
     slot_t slot;
-    for (i = 0; i < num_keys; i++) {
-        slot = PageIO::BPT::LeafPage::get_nth_slot(ctrl_block->frame, i);
-        if (slot.get_key() == key) break;
+    // for (i = 0; i < num_keys; i++) {
+    //     slot = PageIO::BPT::LeafPage::get_nth_slot(ctrl_block->frame, i);
+    //     if (slot.get_key() == key) break;
+    // }
+
+    int lo = 0;
+    int hi = num_keys - 1;
+    while(lo <= hi){
+        int mid = (lo + hi) / 2;
+        slot = PageIO::BPT::LeafPage::get_nth_slot(ctrl_block->frame, mid);
+        if(slot.get_key() == key){
+            i = mid;
+            break;
+        }
+        else if(slot.get_key() < key){
+            lo = mid + 1;
+        }
+        else{
+            hi = mid - 1;
+        }
     }
+
     if (i == num_keys) {
         return_ctrl_block(&ctrl_block);
         return 1;
