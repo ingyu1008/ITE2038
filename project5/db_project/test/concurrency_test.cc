@@ -151,6 +151,10 @@ TEST(ConcurrencyCtrl, SingleThreadRandom) {
             EXPECT_EQ(res, 0);
             res = db_find(table_id, i, buffer, &old_val_size, trx_id);
             EXPECT_EQ(res, 0);
+
+            for(int j = 0; j < old_val_size; j++){
+                EXPECT_EQ(buffer[j], data[j]);
+            }
         } else {
             res = db_find(table_id, i, buffer, &old_val_size, trx_id);
             EXPECT_EQ(res, 0);
@@ -167,7 +171,7 @@ void* thread_func(void* arg) {
     EXPECT_GT(trx_id, 0);
 
     int table_id = *((int*)arg);
-    int n = 1000;
+    int n = 10000;
 
     int err = 0;
     uint16_t val_size;
@@ -196,7 +200,7 @@ TEST(ConcurrencyCtrl, SLockOnlyTest) {
 
     int table_id = open_table("SLockOnly.dat");
 
-    int n = 1000;
+    int n = 10000;
 
     for (int i = 1; i <= n; i++) {
         #if DEBUG_MODE

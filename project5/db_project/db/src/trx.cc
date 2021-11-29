@@ -42,7 +42,7 @@ lock_t* trx_get_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t t
                 lock = temp_lock;
                 break;
             }
-            temp_lock = temp_lock->next;
+            temp_lock = temp_lock->trx_next;
         }
     }
 
@@ -80,9 +80,24 @@ lock_t* trx_acquire(int64_t table_id, pagenum_t pagenum, int64_t key, uint64_t t
 }
 
 void trx_abort(uint64_t trx_id) {
+    pthread_mutex_lock(&trx_table_latch);
     #if DEBUG_MODE
     std::cout << "[ABORT] Aborted " << trx_id << std::endl;
     #endif
+
+    auto it = trx_table.find(trx_id);
+    if (it != trx_table.end()) {
+        trx_entry_t* trx_entry = it->second;
+        lock_t* temp_lock = trx_entry->lock;
+        while (temp_lock != nullptr) {
+            // TODO implement roll back
+            lock_t* next = temp_lock->trx_next;
+            lock_release(temp_lock);
+            temp_lock = next;
+        }
+    }
+
+    pthread_mutex_unlock(&trx_table_latch);
 }
 
 int trx_init() {

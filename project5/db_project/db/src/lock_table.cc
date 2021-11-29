@@ -17,6 +17,8 @@ void print_locks(hash_table_entry_t* list) {
 }
 
 void wake_up(hash_table_entry_t* list) {
+	//TODO implement properly
+	//This implementation just wake up everything
 	lock_t* lock = list->head;
 	while (lock != NULL) {
 		pthread_cond_signal(&lock->lock_table_cond);
@@ -60,17 +62,12 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
 	lock_t* lock = new lock_t();
 	lock->next = NULL;
 	lock->prev = list->tail;
-	lock->trx_id = trx_id;
-	lock->record_id = key;
-	lock->lock_mode = lock_mode;
 	lock->sentinel = list;
+	lock->lock_table_cond = PTHREAD_COND_INITIALIZER;
+	lock->lock_mode = lock_mode;
+	lock->record_id = key;
+	lock->trx_id = trx_id;
 	lock->trx_next = nullptr;
-	int err = pthread_cond_init(&lock->lock_table_cond, NULL);
-	if (err != 0) {
-		pthread_mutex_unlock(&lock_table_latch);
-		return nullptr;
-	}
-	// lock->lock_table_cond = PTHREAD_COND_INITIALIZER;
 
 	if (list->tail != NULL) {
 		list->tail->next = lock;
@@ -106,10 +103,8 @@ int lock_release(lock_t* lock_obj) {
 	if (next != NULL) {
 		wake_up(list);
 	}
-
-	int err = pthread_cond_destroy(&lock_obj->lock_table_cond);
 	delete lock_obj;
 	pthread_mutex_unlock(&lock_table_latch);
-	return err;
+	return 0;
 }
 
