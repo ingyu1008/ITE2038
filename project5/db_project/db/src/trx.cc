@@ -1,4 +1,5 @@
 #include "trx.h"
+#define DEBUG_MODE 0
 
 struct trx_entry_t {
     uint64_t trx_id;
@@ -12,8 +13,9 @@ pthread_mutex_t trx_table_latch;
 std::unordered_map<uint64_t, trx_entry_t*> trx_table;
 
 void print_trx_list(int trx_id) {
+    #if DEBUG_MODE
     if (trx_table.find(trx_id) == trx_table.end()) return;
-    
+
     pthread_mutex_lock(&trx_table_latch);
     std::cout << "[DEBUG] Start trx list" << std::endl;
     lock_t* lock = trx_table[trx_id]->lock;
@@ -21,10 +23,11 @@ void print_trx_list(int trx_id) {
         std::cout << "[DEBUG] lock_mode: " << lock->lock_mode << " page_id: " << lock->sentinel->page_id << " record_id: " << lock->record_id << " trx_id: " << lock->trx_id << std::endl;
         lock = lock->trx_next;
     }
-    
+
     std::cout << "[DEBUG] End of trx list" << std::endl;
-    
+
     pthread_mutex_unlock(&trx_table_latch);
+    #endif
 }
 
 lock_t* trx_get_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t trx_id, int lock_mode) {
@@ -47,10 +50,6 @@ lock_t* trx_get_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t t
 }
 
 lock_t* trx_acquire(int64_t table_id, pagenum_t pagenum, int64_t key, uint64_t trx_id, int lock_mode) {
-
-    // print_trx_list(trx_id);
-    
-
     pthread_mutex_lock(&trx_table_latch);
     lock_t* lock = trx_get_lock(table_id, pagenum, key, trx_id, lock_mode);
 
@@ -61,7 +60,9 @@ lock_t* trx_acquire(int64_t table_id, pagenum_t pagenum, int64_t key, uint64_t t
 
     auto it = trx_table.find(trx_id);
     if (it != trx_table.end()) {
-        // std::cout << "[DEBUG] Found trx with trx_id = " << trx_id << ", record_id = " << key << std::endl;
+        #if DEBUG_MODE
+        std::cout << "[DEBUG] Found trx with trx_id = " << trx_id << ", record_id = " << key << std::endl;
+        #endif
         trx_entry_t* trx_entry = it->second;
 
         lock = lock_acquire(table_id, pagenum, key, trx_id, lock_mode);
@@ -69,7 +70,9 @@ lock_t* trx_acquire(int64_t table_id, pagenum_t pagenum, int64_t key, uint64_t t
             lock->trx_next = trx_entry->lock;
             trx_entry->lock = lock;
         } else {
+            #if DEBUG_MODE
             std::cout << "[ERROR] Failed to acquire lock" << std::endl;
+            #endif
         }
     }
     pthread_mutex_unlock(&trx_table_latch);
@@ -77,7 +80,9 @@ lock_t* trx_acquire(int64_t table_id, pagenum_t pagenum, int64_t key, uint64_t t
 }
 
 void trx_abort(uint64_t trx_id) {
+    #if DEBUG_MODE
     std::cout << "[ABORT] Aborted " << trx_id << std::endl;
+    #endif
 }
 
 int trx_init() {
@@ -87,7 +92,9 @@ int trx_init() {
 
 int trx_begin(void) {
     pthread_mutex_lock(&trx_table_latch);
+    #if DEBUG_MODE
     std::cout << "[DEBUG] trx_begin trx_id = " << trx_id << std::endl;
+    #endif
     trx_entry_t* trx_entry = new trx_entry_t();
     if (trx_entry != nullptr) {
         trx_entry->trx_id = trx_id++;
@@ -110,7 +117,9 @@ int trx_begin(void) {
 int trx_commit(int trx_id) {
     // print_trx_list(trx_id);
     pthread_mutex_lock(&trx_table_latch);
+    #if DEBUG_MODE
     std::cout << "[DEBUG] trx_commit trx_id = " << trx_id << std::endl;
+    #endif
     auto it = trx_table.find(trx_id);
     if (it != trx_table.end()) {
         trx_entry_t* trx_entry = it->second;

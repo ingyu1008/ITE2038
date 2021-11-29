@@ -1,4 +1,5 @@
 #include "buffer.h"
+#define DEBUG_MODE 0
 
 int buf_size;
 std::vector<control_block_t*> buffer_ctrl_blocks;
@@ -13,17 +14,19 @@ int cache_hit = 0;
 int tot_read = 0;
 
 void print_buffer_info() {
+    #if DEBUG_MODE
     std::cout << "[DEBUG] Buffer Info Begin" << std::endl;
     for (auto p : pagemap) {
         std::cout << p.second->pagenum << std::endl;
     }
     std::cout << "[DEBUG] Buffer Info End" << std::endl;
+    #endif
 }
 
-void double_buffer(int num_buf){
-    buffer.resize(num_buf*2);
-    buffer_ctrl_blocks.resize(num_buf*2);
-    for (int i = num_buf; i < 2*num_buf; i++) {
+void double_buffer(int num_buf) {
+    buffer.resize(num_buf * 2);
+    buffer_ctrl_blocks.resize(num_buf * 2);
+    for (int i = num_buf; i < 2 * num_buf; i++) {
         buffer[i] = (page_t*)malloc(sizeof(page_t));
         buffer_ctrl_blocks[i] = (control_block_t*)malloc(sizeof(control_block_t));
 
@@ -32,22 +35,24 @@ void double_buffer(int num_buf){
             exit(EXIT_FAILURE);
         }
     }
-    for (int i = num_buf; i < 2*num_buf; i++) {
+    for (int i = num_buf; i < 2 * num_buf; i++) {
         buffer_ctrl_blocks[i]->frame = buffer[i];
         buffer_ctrl_blocks[i]->table_id = -1;
         buffer_ctrl_blocks[i]->pagenum = 0;
         buffer_ctrl_blocks[i]->is_dirty = 0;
         buffer_ctrl_blocks[i]->is_pinned = 0;
-        buffer_ctrl_blocks[i]->next = buffer_ctrl_blocks[(i + 2*num_buf - 1) % (2*num_buf)];
-        buffer_ctrl_blocks[i]->prev = buffer_ctrl_blocks[(i + 1) % (2*num_buf)];
+        buffer_ctrl_blocks[i]->next = buffer_ctrl_blocks[(i + 2 * num_buf - 1) % (2 * num_buf)];
+        buffer_ctrl_blocks[i]->prev = buffer_ctrl_blocks[(i + 1) % (2 * num_buf)];
     }
 
+    #if DEBUG_MODE
     std::cout << "Doubled!" << std::endl;
+    #endif
     buffer_ctrl_blocks[num_buf]->next = victim->next;
     victim->next->prev = buffer_ctrl_blocks[num_buf];
 
-    buffer_ctrl_blocks[num_buf*2 - 1]->prev = victim;
-    victim->next = buffer_ctrl_blocks[num_buf*2 - 1];
+    buffer_ctrl_blocks[num_buf * 2 - 1]->prev = victim;
+    victim->next = buffer_ctrl_blocks[num_buf * 2 - 1];
 
 
     victim = buffer_ctrl_blocks[num_buf];
@@ -87,7 +92,10 @@ control_block_t* find_victim() {
         if (cur == victim) {
 
             print_buffer_info();
+            
+            #if DEBUG_MODE
             std::cout << "[FATAL] Buffer Full" << std::endl;
+            #endif
             // exit(EXIT_FAILURE);
             double_buffer(buffer.size());
             return victim;
@@ -293,8 +301,10 @@ int buf_shutdown_db() {
     }
     file_close_database_file();
 
+    #if DEBUG_MODE
     std::cout << "[DEBUG] Total pin count on shutdown_db() = " << total << std::endl;
     std::cout << "[DEBUG] " << cache_hit << " hits out of " << tot_read << " read operations." << std::endl;
+    #endif
     return total == 0;
 }
 

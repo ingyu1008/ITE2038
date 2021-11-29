@@ -1,33 +1,38 @@
 #include "lock_table.h"
+#define DEBUG_MODE 0
 
 pthread_mutex_t lock_table_latch;
 
 std::unordered_map<std::pair<int64_t, int64_t>, hash_table_entry_t*, Hash> lock_table;
 
 
-void print_locks(hash_table_entry_t *list){
-	lock_t *lock = list->head;
-	while(lock != NULL){
+void print_locks(hash_table_entry_t* list) {
+	#if DEBUG_MODE
+	lock_t* lock = list->head;
+	while (lock != NULL) {
 		std::cout << "[DEBUG] lock_mode: " << lock->lock_mode << " record_id: " << lock->record_id << " trx_id: " << lock->trx_id << std::endl;
 		lock = lock->next;
 	}
+	#endif
 }
 
-void wake_up(hash_table_entry_t *list){
-	lock_t *lock = list->head;
-	while(lock != NULL){
+void wake_up(hash_table_entry_t* list) {
+	lock_t* lock = list->head;
+	while (lock != NULL) {
 		pthread_cond_signal(&lock->lock_table_cond);
 		lock = lock->next;
 	}
 };
 
-bool conflict_exists(hash_table_entry_t* list, lock_t *lock){
+bool conflict_exists(hash_table_entry_t* list, lock_t* lock) {
 	return false;
 	// TODO implement
 	lock_t* curr = list->head;
-	while(curr != NULL){
-		if(curr->trx_id != lock->trx_id && curr->record_id == lock->record_id && (lock->lock_mode | curr->lock_mode) == 1 && curr != lock){
+	while (curr != NULL) {
+		if (curr->trx_id != lock->trx_id && curr->record_id == lock->record_id && (lock->lock_mode | curr->lock_mode) == 1 && curr != lock) {
+			#if DEBUG_MODE
 			std::cout << "[DEBUG] conflict!!!" << std::endl;
+			#endif
 			return true;
 		}
 		curr = curr->next;

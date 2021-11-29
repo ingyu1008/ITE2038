@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 #define BUF_SIZE 5
+#define DEBUG_MODE 0
 
 TEST(ConcurrencyCtrl, SingleThread) {
     EXPECT_EQ(init_db(BUF_SIZE), 0);
@@ -19,7 +20,9 @@ TEST(ConcurrencyCtrl, SingleThread) {
     int n = 100;
 
     for (int i = 1; i <= n; i++) {
+        #if DEBUG_MODE
         std::cout << "[DEBUG] Inserting key = " << i << std::endl;
+        #endif
         std::string data = "01234567890123456789012345678901234567890123456789" + std::to_string(i);
         int res = db_insert(table_id, i, const_cast<char*>(data.c_str()), data.length());
         EXPECT_EQ(res, 0);
@@ -50,7 +53,9 @@ TEST(ConcurrencyCtrl, SingleThread) {
     std::cout << "[INFO] Trx successfully begun, trx_id = " << trx_id << std::endl;
 
     for (int i = 1; i <= n; i++) {
+        #if DEBUG_MODE
         std::cout << "[DEBUG] Updating key = " << i << std::endl;
+        #endif
         std::string data = "01234567890123456789012345678901234567890123456789" + std::to_string(i + 1);
         uint16_t old_val_size = 0;
         int res = db_update(table_id, i, const_cast<char*>(data.c_str()), data.length(), &old_val_size, trx_id);
@@ -79,7 +84,9 @@ TEST(ConcurrencyCtrl, SingleThreadRandom) {
     int n = 1000;
 
     for (int i = 1; i <= n; i++) {
+        #if DEBUG_MODE
         std::cout << "[DEBUG] Inserting key = " << i << std::endl;
+        #endif
         std::string data = "01234567890123456789012345678901234567890123456789" + std::to_string(i);
         int res = db_insert(table_id, i, const_cast<char*>(data.c_str()), data.length());
         EXPECT_EQ(res, 0);
@@ -133,12 +140,16 @@ TEST(ConcurrencyCtrl, SingleThreadRandom) {
         uint16_t old_val_size = 0;
 
         if (p.first == 1) {
+            #if DEBUG_MODE
             std::cout << "[DEBUG] Updating key = " << i << std::endl;
+            #endif
             std::string data = "12345678901234567890123456789012345678901234567890" + std::to_string(i);
 
             res = db_find(table_id, i, buffer, &old_val_size, trx_id);
             EXPECT_EQ(res, 0);
             res = db_update(table_id, i, const_cast<char*>(data.c_str()), data.length(), &old_val_size, trx_id);
+            EXPECT_EQ(res, 0);
+            res = db_find(table_id, i, buffer, &old_val_size, trx_id);
             EXPECT_EQ(res, 0);
         } else {
             res = db_find(table_id, i, buffer, &old_val_size, trx_id);
@@ -188,7 +199,9 @@ TEST(ConcurrencyCtrl, SLockOnlyTest) {
     int n = 1000;
 
     for (int i = 1; i <= n; i++) {
+        #if DEBUG_MODE
         std::cout << "[DEBUG] Inserting key = " << i << std::endl;
+        #endif
         std::string data = "01234567890123456789012345678901234567890123456789" + std::to_string(i);
         int res = db_insert(table_id, i, const_cast<char*>(data.c_str()), data.length());
         EXPECT_EQ(res, 0);
@@ -201,7 +214,9 @@ TEST(ConcurrencyCtrl, SLockOnlyTest) {
     // pthread_attr_t attr;
     // pthread_attr_setstacksize(&attr, 128 * 1024 * 1024);
     for (int i = 0; i < m; i++) {
+        #if DEBUG_MODE
         std::cout << "[DEBUG] Create thread " << i << std::endl;
+        #endif
         pthread_create(&threads[i], NULL, thread_func, &table_id);
     }
 

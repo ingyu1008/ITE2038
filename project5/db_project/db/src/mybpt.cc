@@ -3,6 +3,7 @@
 #include "buffer.h"
 #include "lock_table.h"
 #include "trx.h"
+#define DEBUG_MODE 0
 
 // Find Operations
 
@@ -464,7 +465,9 @@ pagenum_t start_new_tree(int64_t table_id, int64_t key, const char* data, uint16
     return_ctrl_block(&ctrl_block, 1);
     // file_write_page(table_id, root_pagenum, &root);
 
+    #if DEBUG_MODE
     std::cout << "[DEBUG] start_new_tree() returns: " << root_pagenum << std::endl;
+    #endif
     return root_pagenum;
 }
 
@@ -1241,7 +1244,7 @@ void print_tree(int64_t table_id, pagenum_t pagenum) {
 
 // Deprecated
 void db_print_tree(int64_t table_id) {
-    std::cout << "[DEBUG] db_print_tree is now not supported" << std::endl;
+    std::cout << "[INFO] db_print_tree is now not supported" << std::endl;
     // page_t header, root;
     // file_read_page(table_id, 0, &header);
     // pagenum_t root_pagenum = PageIO::HeaderPage::get_root_pagenum(&header);
@@ -1265,7 +1268,9 @@ int db_find(int64_t table_id, int64_t key, char* ret_val, uint16_t* val_size, in
         trx_abort(trx_id);
         return -1;
     } else if (err == 1) {
+        #if DEBUG_MODE
         std::cout << "[DEBUG] Could not find record key = " << key << ", trx_id = " << trx_id << std::endl;
+        #endif
     }
     return 0;
 }
@@ -1301,7 +1306,7 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
 
     ctrl_block->frame->set_data(value, slot.get_offset(), val_size);
 
-    return_ctrl_block(&ctrl_block);
+    return_ctrl_block(&ctrl_block, 1);
     return 0;
 }
 
@@ -1317,7 +1322,9 @@ int db_update(int64_t table_id, int64_t key, char* value, uint16_t val_size, uin
         trx_abort(trx_id);
         return -1;
     } else if (err == 1) {
+        #if DEBUG_MODE
         std::cout << "[DEBUG] Could not find record key=" << key << std::endl;
+        #endif
     }
     return 0;
 }
