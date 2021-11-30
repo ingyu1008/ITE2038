@@ -9,7 +9,7 @@
 
 typedef uint64_t pagenum_t;
 
-constexpr uint64_t INITIAL_SIZE = 10485760; // 10 MiB
+constexpr uint64_t INITIAL_SIZE = 1048576; // 1 MiB
 constexpr uint64_t PAGE_SIZE = 4096;
 constexpr uint64_t SLOT_SIZE = 12;
 constexpr uint64_t BRANCH_FACTOR_SIZE = 16;

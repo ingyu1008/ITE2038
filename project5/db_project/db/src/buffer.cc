@@ -10,8 +10,8 @@ std::map<std::pair<int64_t, pagenum_t>, control_block_t*> pagemap;
 
 pthread_mutex_t buffer_manager_latch;
 
-int cache_hit = 0;
-int tot_read = 0;
+// int cache_hit = 0;
+// int tot_read = 0;
 
 void print_buffer_info() {
     #if DEBUG_MODE
@@ -141,6 +141,7 @@ void free_page(int64_t table_id, pagenum_t page_number) {
     pthread_mutex_lock(&header_ctrl_block->page_latch);
     page_t free_page;
     PageIO::FreePage::set_next_free_pagenum(&free_page, PageIO::HeaderPage::get_free_pagenum(header_ctrl_block->frame));
+    // pagemap[std::make_pair(table_id, page_number)]->frame->set_data(reinterpret_cast<const char*>(&free_page), 0, PAGE_SIZE);
     file_write_page(table_id, page_number, &free_page);
     PageIO::HeaderPage::set_free_pagenum(header_ctrl_block->frame, page_number);
     header_ctrl_block->is_dirty |= 1;
@@ -174,7 +175,7 @@ control_block_t* buf_read_page(int64_t table_id, pagenum_t page_number) {
     // std::cout << "Read Page: " << table_id << " " << page_number << std::endl;
     print_buffer_info();
     #endif
-    tot_read++;
+    // tot_read++;
 
     control_block_t* cur = find_buffer(table_id, page_number);//pagemap[std::make_pair(table_id, page_number)];
 
@@ -183,7 +184,7 @@ control_block_t* buf_read_page(int64_t table_id, pagenum_t page_number) {
     }
 
 
-    cache_hit++;
+    // cache_hit++;
     move_to_beg_of_list(cur);
 
     pthread_mutex_lock(&cur->page_latch);
