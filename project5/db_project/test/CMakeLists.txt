@@ -9,7 +9,7 @@ FetchContent_MakeAvailable(googletest)
 
 set(DB_TESTS
   # concurrency_test.cc
-  # file_test.cc
+  file_test.cc
   # bpt_test.cc
   # Add your test files here
   # foo/bar/your_test.cc
