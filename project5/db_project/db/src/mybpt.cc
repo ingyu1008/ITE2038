@@ -21,12 +21,26 @@ pagenum_t find_leaf(int64_t table_id, pagenum_t root_pagenum, int64_t key) {
     while (PageIO::BPT::get_is_leaf(ctrl_block->frame) == 0) // While the page is internal
     {
         int num_keys = PageIO::BPT::get_num_keys(ctrl_block->frame);
-        int i;
-        for (i = 0; i < num_keys; i++) {
-            if (key < PageIO::BPT::InternalPage::get_nth_branch_factor(ctrl_block->frame, i).get_key()) {
-                break;
+        int i = num_keys;
+        // for (i = 0; i < num_keys; i++) {
+        //     if (key < PageIO::BPT::InternalPage::get_nth_branch_factor(ctrl_block->frame, i).get_key()) {
+        //         break;
+        //     }
+        // }
+
+        int lo = 0;
+        int hi = num_keys - 1;
+        while(lo <= hi){
+            int mid = (lo + hi) / 2;
+            if(key < PageIO::BPT::InternalPage::get_nth_branch_factor(ctrl_block->frame, mid).get_key()){
+                hi = mid - 1;
+                i = std::min(i, mid);
+            }
+            else{
+                lo = mid + 1;
             }
         }
+
         if (i == 0) {
             cur = PageIO::BPT::InternalPage::get_leftmost_pagenum(ctrl_block->frame);
         } else {
@@ -54,12 +68,28 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
     // file_read_page(table_id, leaf, &page);
 
     int num_keys = PageIO::BPT::get_num_keys(ctrl_block->frame);
-    int i;
+    int i = num_keys;
     slot_t slot;
-    for (i = 0; i < num_keys; i++) {
-        slot = PageIO::BPT::LeafPage::get_nth_slot(ctrl_block->frame, i);
-        if (slot.get_key() == key) break;
+    // for (i = 0; i < num_keys; i++) {
+    //     slot = PageIO::BPT::LeafPage::get_nth_slot(ctrl_block->frame, i);
+    //     if (slot.get_key() == key) break;
+    // }
+
+    int lo = 0;
+    int hi = num_keys - 1;
+    while (lo <= hi) {
+        int mid = (lo + hi) / 2;
+        slot = PageIO::BPT::LeafPage::get_nth_slot(ctrl_block->frame, mid);
+        if (slot.get_key() == key) {
+            i = mid;
+            break;
+        }         else if (slot.get_key() > key) {
+            hi = mid - 1;
+        }         else {
+            lo = mid + 1;
+        }
     }
+
     if (i == num_keys) {
         return_ctrl_block(&ctrl_block);
         return 1;
@@ -82,7 +112,7 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
 
     return_ctrl_block(&ctrl_block);
     return 0;
-    }
+}
 
 // Insertion
 
@@ -258,11 +288,27 @@ pagenum_t insert_into_node_after_splitting(int64_t table_id, pagenum_t root_page
     PageIO::BPT::set_parent_pagenum(ctrl_block->frame, par_pagenum);
     PageIO::BPT::set_num_keys(ctrl_block->frame, num_keys - split);
 
-    for (++i, j = 0; i < branch_factors.size(); i++, j++) {
+    int st = ++i;
+
+    for (i = st, j = 0; i < branch_factors.size(); i++, j++) {
         branch_factor_t branch_factor;
         branch_factor.set_key(branch_factors[i].first);
         branch_factor.set_pagenum(branch_factors[i].second);
         PageIO::BPT::InternalPage::set_nth_branch_factor(ctrl_block->frame, j, branch_factor);
+
+        // child_ctrl_block = buf_read_page(table_id, branch_factors[i].second);
+        // // file_read_page(table_id, branch_factors[i].second, &child);
+        // PageIO::BPT::set_parent_pagenum(child_ctrl_block->frame, new_node_pagenum);
+        // return_ctrl_block(&child_ctrl_block, 1);
+        // // file_write_page(table_id, branch_factors[i].second, &child);
+    }
+    return_ctrl_block(&ctrl_block, 1);
+
+    for (i = st, j = 0; i < branch_factors.size(); i++, j++) {
+        // branch_factor_t branch_factor;
+        // branch_factor.set_key(branch_factors[i].first);
+        // branch_factor.set_pagenum(branch_factors[i].second);
+        // PageIO::BPT::InternalPage::set_nth_branch_factor(ctrl_block->frame, j, branch_factor);
 
         child_ctrl_block = buf_read_page(table_id, branch_factors[i].second);
         // file_read_page(table_id, branch_factors[i].second, &child);
@@ -270,7 +316,6 @@ pagenum_t insert_into_node_after_splitting(int64_t table_id, pagenum_t root_page
         return_ctrl_block(&child_ctrl_block, 1);
         // file_write_page(table_id, branch_factors[i].second, &child);
     }
-    return_ctrl_block(&ctrl_block, 1);
     // file_write_page(table_id, new_node_pagenum, ctrl_block->frame);
 
     return insert_into_parent(table_id, root_pagenum, old_node_pagenum, prop_key, new_node_pagenum);
@@ -316,8 +361,19 @@ pagenum_t insert_into_leaf(int64_t table_id, pagenum_t leaf_pagenum, int64_t key
     int num_keys = PageIO::BPT::get_num_keys(ctrl_block->frame);
 
     int insertion_point = 0;
-    while (insertion_point < num_keys && PageIO::BPT::LeafPage::get_nth_slot(ctrl_block->frame, insertion_point).get_key() < key) {
-        insertion_point++;
+    // while (insertion_point < num_keys && PageIO::BPT::LeafPage::get_nth_slot(ctrl_block->frame, insertion_point).get_key() < key) {
+    //     insertion_point++;
+    // }
+    int lo = 0;
+    int hi = num_keys - 1;
+    while (lo <= hi) {
+        int mid = (lo + hi) / 2;
+        if (PageIO::BPT::LeafPage::get_nth_slot(ctrl_block->frame, mid).get_key() < key) {
+            lo = mid + 1;
+            insertion_point = mid + 1;
+        } else {
+            hi = mid - 1;
+        }
     }
 
     uint64_t amount_free_space = PageIO::BPT::LeafPage::get_amount_free_space(ctrl_block->frame);
@@ -1013,6 +1069,7 @@ pagenum_t delete_entry(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagen
         return adjust_root(table_id, root_pagenum);
     }
 
+    std::cout << "A" << std::endl;
     ctrl_block = buf_read_page(table_id, pagenum);
     // file_read_page(table_id, pagenum, &page);
     is_leaf = PageIO::BPT::get_is_leaf(ctrl_block->frame);
@@ -1078,17 +1135,19 @@ pagenum_t delete_entry(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagen
         int min_keys = NODE_MAX_KEYS / 2;
         int num_keys = PageIO::BPT::get_num_keys(ctrl_block->frame);
 
+        return_ctrl_block(&ctrl_block);
         if (num_keys >= min_keys) {
-            return_ctrl_block(&ctrl_block);
             return root_pagenum;
         }
-        pagenum_t parent_pagenum = PageIO::BPT::get_parent_pagenum(ctrl_block->frame);
-        control_block_t* par_ctrl_block = buf_read_page(table_id, parent_pagenum);
         // page_t parent;
         // file_read_page(table_id, parent_pagenum, &parent);
 
         int neighbor_index = get_neighbor_index(table_id, pagenum);
         int k_prime_index = neighbor_index == -1 ? 0 : neighbor_index;
+
+        ctrl_block = buf_read_page(table_id, pagenum);
+        pagenum_t parent_pagenum = PageIO::BPT::get_parent_pagenum(ctrl_block->frame);
+        control_block_t* par_ctrl_block = buf_read_page(table_id, parent_pagenum);
 
         branch_factor_t branch_factor = PageIO::BPT::InternalPage::get_nth_branch_factor(par_ctrl_block->frame, k_prime_index);
         int64_t k_prime = branch_factor.get_key();
@@ -1104,6 +1163,7 @@ pagenum_t delete_entry(int64_t table_id, pagenum_t root_pagenum, pagenum_t pagen
         return_ctrl_block(&ctrl_block);
         return_ctrl_block(&par_ctrl_block);
 
+        std::cout << "B" << std::endl;
         control_block_t* neighbor_ctrl_block = buf_read_page(table_id, neighbor_pagenum);
         // page_t neighbor;
         // file_read_page(table_id, neighbor_pagenum, &neighbor);
