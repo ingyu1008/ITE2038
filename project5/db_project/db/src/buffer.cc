@@ -6,7 +6,7 @@ std::vector<control_block_t*> buffer_ctrl_blocks;
 std::vector<page_t*> buffer;
 
 control_block_t* victim = nullptr; // tail of the linked list, first one on the list is the most recent;
-std::map<std::pair<int64_t, pagenum_t>, control_block_t*> pagemap;
+std::unordered_map<std::pair<int64_t, pagenum_t>, control_block_t*, Hash_buf> pagemap;
 
 pthread_mutex_t buffer_manager_latch;
 
@@ -78,10 +78,11 @@ void move_to_beg_of_list(control_block_t* cur) {
 }
 
 control_block_t* find_buffer(int64_t table_id, pagenum_t page_number) {
-    if (pagemap.find(std::make_pair(table_id, page_number)) == pagemap.end()) {
+    auto it = pagemap.find(std::make_pair(table_id, page_number));
+    if (it == pagemap.end()) {
         return nullptr;
     }
-    return pagemap[std::make_pair(table_id, page_number)];
+    return it->second;
 }
 
 // Search for eviction victim.
