@@ -1326,6 +1326,7 @@ void db_print_tree(int64_t table_id) {
 /******************************************************************************/
 
 int db_find(int64_t table_id, int64_t key, char* ret_val, uint16_t* val_size, int trx_id) {
+    return 0;
     control_block_t* header_ctrl_block = buf_read_page(table_id, 0);
     // page_t header;
     // file_read_page(table_id, 0, &header);
@@ -1397,6 +1398,7 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
 }
 
 int db_update(int64_t table_id, int64_t key, char* value, uint16_t val_size, uint16_t* old_val_size, int trx_id) {
+    return 0;
     control_block_t* header_ctrl_block = buf_read_page(table_id, 0);
     // page_t header;
     // file_read_page(table_id, 0, &header);
