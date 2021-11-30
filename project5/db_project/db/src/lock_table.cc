@@ -1,5 +1,9 @@
 #include "lock_table.h"
+#include <set>
 #define DEBUG_MODE 0
+
+constexpr int LOCK_MODE_EXCLUSIVE = 1;
+constexpr int LOCK_MODE_SHARED = 0;
 
 pthread_mutex_t lock_table_latch;
 
@@ -16,25 +20,48 @@ void print_locks(hash_table_entry_t* list) {
 	#endif
 }
 
-void wake_up(hash_table_entry_t* list) {
-	//TODO implement properly
-	//This implementation just wake up everything
-	lock_t* lock = list->head;
-	while (lock != NULL) {
-		pthread_cond_signal(&lock->lock_table_cond);
-		lock = lock->next;
+void wake_up(hash_table_entry_t* list, lock_t* lock) {
+	lock_t* cur = list->head;
+	int record_id = lock->record_id;
+	int trx_id = lock->trx_id;
+	std::set<int> trx_ids;
+	while (cur != nullptr) {
+		if (cur->record_id != record_id || cur == lock) {
+			cur = cur->next;
+			continue;
+		}
+		if (cur->lock_mode == LOCK_MODE_EXCLUSIVE) {
+			if (trx_ids.size() == 0 || (trx_ids.size() == 1 && trx_ids.find(cur->trx_id) != trx_ids.end())) {
+				pthread_cond_signal(&cur->lock_table_cond);
+			}
+			break;
+		} else {
+			trx_ids.insert(cur->trx_id);
+			pthread_cond_signal(&cur->lock_table_cond);
+			cur = cur->next;
+		}
 	}
+
+	// //TODO implement properly
+	// //This implementation just wake up everything
+	// lock_t* lock = list->head;
+	// while (lock != NULL) {
+	// 	pthread_cond_signal(&lock->lock_table_cond);
+	// 	lock = lock->next;
+	// }
 };
 
 bool conflict_exists(hash_table_entry_t* list, lock_t* lock) {
-	return false;
+	// return false;
 	// TODO implement
 	lock_t* curr = list->head;
 	while (curr != NULL) {
-		if (curr->trx_id != lock->trx_id && curr->record_id == lock->record_id && (lock->lock_mode | curr->lock_mode) == 1 && curr != lock) {
+		if (curr == lock) return false;
+		if (curr->trx_id != lock->trx_id && curr->record_id == lock->record_id && (lock->lock_mode | curr->lock_mode) == 1) {
 			#if DEBUG_MODE
-			std::cout << "[DEBUG] conflict!!!" << std::endl;
+			std::cout << "[DEBUG] conflict! " << curr->record_id << ", " << curr->trx_id << ", " << lock->trx_id << std::endl;
 			#endif
+			// print_locks(list);
 			return true;
 		}
 		curr = curr->next;
@@ -68,6 +95,7 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
 	lock->record_id = key;
 	lock->trx_id = trx_id;
 	lock->trx_next = nullptr;
+	lock->original_value = nullptr;
 
 	if (list->tail != NULL) {
 		list->tail->next = lock;
@@ -79,7 +107,7 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
 	while (conflict_exists(list, lock)) {
 		pthread_cond_wait(&lock->lock_table_cond, &lock_table_latch);
 	}
-	print_locks(list);
+	// print_locks(list);
 	pthread_mutex_unlock(&lock_table_latch);
 	return lock;
 };
@@ -90,6 +118,7 @@ int lock_release(lock_t* lock_obj) {
 	lock_t* next = lock_obj->next;
 	hash_table_entry_t* list = lock_obj->sentinel;
 
+	wake_up(list, lock_obj);
 	if (prev != NULL) {
 		prev->next = next;
 	}
@@ -101,8 +130,7 @@ int lock_release(lock_t* lock_obj) {
 		list->tail = NULL;
 	}
 	if (next != NULL) {
-		pthread_cond_signal(&next->lock_table_cond);
-		// wake_up(list);
+		// pthread_cond_signal(&next->lock_table_cond);
 	}
 	delete lock_obj;
 	pthread_mutex_unlock(&lock_table_latch);

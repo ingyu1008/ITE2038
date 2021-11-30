@@ -59,6 +59,7 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
     #if DEBUG_MODE
     std::cout << "[INFO] find() called. key = " << key << std::endl;
     #endif
+    *val_size = 0;
     pagenum_t leaf = find_leaf(table_id, root_pagenum, key);
 
     if (leaf == 0) return 1;
@@ -99,7 +100,7 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
         return_ctrl_block(&ctrl_block);
         // std::cout << "[DEBUG] Page acquired: " << leaf << " by trx_id = " << trx_id << std::endl;
         // lock_t *lock = lock_acquire(table_id, leaf, key, trx_id, 0);
-        lock_t* lock = trx_acquire(table_id, leaf, i, trx_id, 0);
+        lock_t* lock = trx_acquire(table_id, leaf, key, trx_id, 0);
         if (lock == nullptr) {
             return -1;
         }
@@ -1349,6 +1350,7 @@ int db_find(int64_t table_id, int64_t key, char* ret_val, uint16_t* val_size, in
 int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, uint16_t val_size, uint16_t* old_val_size, int trx_id) {
     pagenum_t leaf = find_leaf(table_id, root_pagenum, key);
 
+    *old_val_size = 0;
     if (leaf == 0) return 1;
 
     control_block_t* ctrl_block = buf_read_page(table_id, leaf);
@@ -1383,7 +1385,7 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
         return 1;
     }
 
-    lock_t* lock = trx_acquire(table_id, leaf, i, trx_id, 1);
+    lock_t* lock = trx_acquire(table_id, leaf, key, trx_id, 1);
 
     if (lock == nullptr) {
         return_ctrl_block(&ctrl_block);
@@ -1402,6 +1404,7 @@ int db_update(int64_t table_id, int64_t key, char* value, uint16_t val_size, uin
     control_block_t* header_ctrl_block = buf_read_page(table_id, 0);
     // page_t header;
     // file_read_page(table_id, 0, &header);
+    // std::cout << value << std::endl;
     pagenum_t root_pagenum = PageIO::HeaderPage::get_root_pagenum(header_ctrl_block->frame);
     return_ctrl_block(&header_ctrl_block);
     int err = update(table_id, root_pagenum, key, value, val_size, old_val_size, trx_id);

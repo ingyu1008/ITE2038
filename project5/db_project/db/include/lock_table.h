@@ -20,6 +20,7 @@ struct lock_t{
 	int record_id;
 	lock_t* trx_next;
 	int trx_id;
+	char* original_value;
 };
 
 struct Hash{

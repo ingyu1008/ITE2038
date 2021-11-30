@@ -141,8 +141,8 @@ void free_page(int64_t table_id, pagenum_t page_number) {
     pthread_mutex_lock(&header_ctrl_block->page_latch);
     page_t free_page;
     PageIO::FreePage::set_next_free_pagenum(&free_page, PageIO::HeaderPage::get_free_pagenum(header_ctrl_block->frame));
-    // pagemap[std::make_pair(table_id, page_number)]->frame->set_data(reinterpret_cast<const char*>(&free_page), 0, PAGE_SIZE);
-    file_write_page(table_id, page_number, &free_page);
+    pagemap[std::make_pair(table_id, page_number)]->frame->set_data(reinterpret_cast<const char*>(&free_page), 0, PAGE_SIZE);
+    // file_write_page(table_id, page_number, &free_page);
     PageIO::HeaderPage::set_free_pagenum(header_ctrl_block->frame, page_number);
     header_ctrl_block->is_dirty |= 1;
     pthread_mutex_unlock(&header_ctrl_block->page_latch);
