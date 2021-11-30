@@ -545,11 +545,13 @@ pagenum_t insert(int64_t table_id, pagenum_t root_pagenum, int64_t key, const ch
 
     /* The current implementation ignores
      * duplicates.
+     * 
+     * This was dealt with wrapper funciton
      */
-    if (find(table_id, root_pagenum, key, buffer, &size) == 0) {
-        // This can be checked beforehand in db_insert().
-        return root_pagenum;
-    }
+    // if (find(table_id, root_pagenum, key, buffer, &size) == 0) {
+    //     // This can be checked beforehand in db_insert().
+    //     return root_pagenum;
+    // }
 
     /* Case: the tree does not exist yet.
      * Start a new tree.
@@ -1214,7 +1216,6 @@ int64_t open_table(char* pathname) {
 }
 
 int db_insert(int64_t table_id, int64_t key, char* value, uint16_t val_size) {
-    return 0;
     control_block_t* header_ctrl_block = buf_read_page(table_id, 0);
     // page_t header;
     // file_read_page(table_id, 0, &header);
@@ -1238,6 +1239,8 @@ int db_insert(int64_t table_id, int64_t key, char* value, uint16_t val_size) {
 }
 
 int db_find(int64_t table_id, int64_t key, char* ret_val, uint16_t* val_size) {
+    *val_size = 0;
+    return 0;
     control_block_t* header_ctrl_block = buf_read_page(table_id, 0);
     // page_t header;
     // file_read_page(table_id, 0, &header);
