@@ -4,7 +4,7 @@
 #include "file.h"
 #include "page.h"
 #include <vector>
-#include <unordered_map>
+#include <map>
 
 // TODO: Encapsulate This Structure (Probably after finish implementing everything)
 struct control_block_t {
@@ -16,12 +16,6 @@ struct control_block_t {
     int is_pinned; // Not deleted for simpler implementation: not modifying internal logic
     control_block_t* next;
     control_block_t* prev;
-};
-
-struct Hash_buf{
-	size_t operator()(const std::pair<int64_t, int64_t>& p) const {
-		return std::hash<int64_t>()(p.first ^ 0x5555555555555555) ^ std::hash<int64_t>()(p.second);
-	}
 };
 
 void return_ctrl_block(control_block_t** ctrl_block, int is_dirty = 0);

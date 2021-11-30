@@ -6,7 +6,7 @@ std::vector<control_block_t*> buffer_ctrl_blocks;
 std::vector<page_t*> buffer;
 
 control_block_t* victim = nullptr; // tail of the linked list, first one on the list is the most recent;
-std::unordered_map<std::pair<int64_t, pagenum_t>, control_block_t*, Hash_buf> pagemap;
+std::map<std::pair<int64_t, pagenum_t>, control_block_t*> pagemap;
 
 pthread_mutex_t buffer_manager_latch;
 
