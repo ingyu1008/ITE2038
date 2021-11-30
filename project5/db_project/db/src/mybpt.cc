@@ -1214,6 +1214,7 @@ int64_t open_table(char* pathname) {
 }
 
 int db_insert(int64_t table_id, int64_t key, char* value, uint16_t val_size) {
+    return 0;
     control_block_t* header_ctrl_block = buf_read_page(table_id, 0);
     // page_t header;
     // file_read_page(table_id, 0, &header);
