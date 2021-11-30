@@ -106,7 +106,6 @@ int trx_init() {
 }
 
 int trx_begin(void) {
-    return trx_id++;
     pthread_mutex_lock(&trx_table_latch);
     #if DEBUG_MODE
     std::cout << "[DEBUG] trx_begin trx_id = " << trx_id << std::endl;
@@ -131,7 +130,6 @@ int trx_begin(void) {
 }
 
 int trx_commit(int trx_id) {
-    return trx_id;
     // print_trx_list(trx_id);
     pthread_mutex_lock(&trx_table_latch);
     #if DEBUG_MODE
