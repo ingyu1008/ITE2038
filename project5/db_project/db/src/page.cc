@@ -12,71 +12,71 @@ template<class T>
 T page_t::get_data(uint16_t offset) {
     offsetCheck<T>(offset);
     T ret;
-    std::memmove(&ret, data + offset, sizeof(T));
+    std::memcpy(&ret, data + offset, sizeof(T));
     return ret;
 }
 template<class T>
 void page_t::get_data(T* dest, uint16_t offset) {
     offsetCheck<T>(offset);
-    std::memmove(dest, data + offset, sizeof(T));
+    std::memcpy(dest, data + offset, sizeof(T));
 }
 
 void page_t::get_data(char* dest, uint16_t offset, uint16_t size) {
-    std::memmove(dest, data + offset, size);
+    std::memcpy(dest, data + offset, size);
 }
 
 template<class T>
 void page_t::set_data(const T src, uint16_t offset) {
     offsetCheck<T>(offset);
-    std::memmove(data + offset, &src, sizeof(T));
+    std::memcpy(data + offset, &src, sizeof(T));
 }
 
 void page_t::set_data(const char* src, uint16_t offset, uint16_t size) {
-    std::memmove(data + offset, src, size);
+    std::memcpy(data + offset, src, size);
 }
 
 slot_t::slot_t() { std::fill_n(data, SLOT_SIZE, '\0'); }
 int64_t slot_t::get_key() const {
     int64_t ret;
-    std::memmove(&ret, data + SLOT_KEY_OFFSET, sizeof(ret));
+    std::memcpy(&ret, data + SLOT_KEY_OFFSET, sizeof(ret));
     return ret;
 }
 uint16_t slot_t::get_size() const {
     uint16_t ret;
-    std::memmove(&ret, data + SLOT_SIZE_OFFSET, sizeof(ret));
+    std::memcpy(&ret, data + SLOT_SIZE_OFFSET, sizeof(ret));
     return ret;
 }
 uint16_t slot_t::get_offset() const {
     uint16_t ret;
-    std::memmove(&ret, data + SLOT_OFFSET_OFFSET, sizeof(ret));
+    std::memcpy(&ret, data + SLOT_OFFSET_OFFSET, sizeof(ret));
     return ret;
 }
 void slot_t::set_key(int64_t key) {
-    std::memmove(data + SLOT_KEY_OFFSET, &key, sizeof(key));
+    std::memcpy(data + SLOT_KEY_OFFSET, &key, sizeof(key));
 }
 void slot_t::set_size(uint16_t size) {
-    std::memmove(data + SLOT_SIZE_OFFSET, &size, sizeof(size));
+    std::memcpy(data + SLOT_SIZE_OFFSET, &size, sizeof(size));
 }
 void slot_t::set_offset(uint16_t offset) {
-    std::memmove(data + SLOT_OFFSET_OFFSET, &offset, sizeof(offset));
+    std::memcpy(data + SLOT_OFFSET_OFFSET, &offset, sizeof(offset));
 }
 
 branch_factor_t::branch_factor_t() { std::fill_n(data, BRANCH_FACTOR_SIZE, '\0'); }
 int64_t branch_factor_t::get_key() const {
     int64_t ret = 0;
-    std::memmove(&ret, data + BF_KEY_OFFSET, sizeof(ret));
+    std::memcpy(&ret, data + BF_KEY_OFFSET, sizeof(ret));
     return ret;
 }
 pagenum_t branch_factor_t::get_pagenum() const {
     pagenum_t ret = 0;
-    std::memmove(&ret, data + BF_PAGENUM_OFFSET, sizeof(ret));
+    std::memcpy(&ret, data + BF_PAGENUM_OFFSET, sizeof(ret));
     return ret;
 }
 void branch_factor_t::set_key(int64_t key) {
-    std::memmove(data + BF_KEY_OFFSET, &key, sizeof(key));
+    std::memcpy(data + BF_KEY_OFFSET, &key, sizeof(key));
 }
 void branch_factor_t::set_pagenum(pagenum_t pagenum) {
-    std::memmove(data + BF_PAGENUM_OFFSET, &pagenum, sizeof(pagenum));
+    std::memcpy(data + BF_PAGENUM_OFFSET, &pagenum, sizeof(pagenum));
 }
 
 pagenum_t PageIO::HeaderPage::get_free_pagenum(page_t* page) {
