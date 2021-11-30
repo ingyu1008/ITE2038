@@ -15,10 +15,10 @@ int tot_read = 0;
 
 void print_buffer_info() {
     #if DEBUG_MODE
-    for (auto p : pagemap) {
-        if(p.second->is_pinned && p.second->pagenum%100 == 0)
-        std::cout << "pagenum = " << p.second->pagenum << ", pin_count = " << p.second->is_pinned << std::endl;
-    }
+    // for (auto p : pagemap) {
+    //     if (p.second->is_pinned && p.second->pagenum % 100 == 0)
+    //         std::cout << "pagenum = " << p.second->pagenum << ", pin_count = " << p.second->is_pinned << std::endl;
+    // }
     #endif
 }
 
@@ -95,7 +95,7 @@ control_block_t* find_victim() {
     //     if (cur == victim) {
 
     //         print_buffer_info();
-            
+
     //         #if DEBUG_MODE
     //         std::cout << "[FATAL] Buffer Full" << std::endl;
     //         #endif
@@ -124,7 +124,7 @@ control_block_t* add_new_page(int64_t table_id, pagenum_t page_number) {
     pagemap.emplace(std::make_pair(table_id, page_number), cur);
     cur->table_id = table_id;
     cur->pagenum = page_number;
-    cur->is_pinned++;
+    // cur->is_pinned++;
     cur->is_dirty = 0;
     return cur;
 }
@@ -137,7 +137,7 @@ void free_page(int64_t table_id, pagenum_t page_number) {
         file_free_page(table_id, page_number);
         return;
     }
-    
+
     //pthread_mutex_lock(&header_ctrl_block->page_latch);
     page_t free_page;
     PageIO::FreePage::set_next_free_pagenum(&free_page, PageIO::HeaderPage::get_free_pagenum(header_ctrl_block->frame));
@@ -149,7 +149,7 @@ void free_page(int64_t table_id, pagenum_t page_number) {
 
 void return_ctrl_block(control_block_t** ctrl_block, int is_dirty) {
     if (ctrl_block == nullptr || (*ctrl_block) == nullptr) return;
-    (*ctrl_block)->is_pinned--;
+    // (*ctrl_block)->is_pinned--;
     (*ctrl_block)->is_dirty |= is_dirty;
     control_block_t* tmp = *ctrl_block;
     (*ctrl_block) = nullptr;
@@ -174,7 +174,6 @@ control_block_t* buf_read_page(int64_t table_id, pagenum_t page_number) {
     // std::cout << "Read Page: " << table_id << " " << page_number << std::endl;
     print_buffer_info();
     #endif
-    print_buffer_info();
     tot_read++;
 
     control_block_t* cur = find_buffer(table_id, page_number);//pagemap[std::make_pair(table_id, page_number)];
@@ -188,7 +187,7 @@ control_block_t* buf_read_page(int64_t table_id, pagenum_t page_number) {
     move_to_beg_of_list(cur);
 
     //pthread_mutex_lock(&cur->page_latch);
-    cur->is_pinned++;
+    // cur->is_pinned++;
     //pthread_mutex_unlock(&buffer_manager_latch);
     return cur;
 }
@@ -198,36 +197,40 @@ pagenum_t buf_alloc_page(int64_t table_id) {
     //pthread_mutex_lock(&buffer_manager_latch);
     control_block_t* header_ctrl_block = find_buffer(table_id, 0);
 
-    if (header_ctrl_block == nullptr) {
-        pagenum_t pagenum = file_alloc_page(table_id);
-        //pthread_mutex_unlock(&buffer_manager_latch);
-        return pagenum;
+    if (header_ctrl_block != nullptr) {
+        file_write_page(table_id, 0, header_ctrl_block->frame);
     }
-
-    pagenum_t pagenum = PageIO::HeaderPage::get_free_pagenum(header_ctrl_block->frame);
-    if (pagenum == 0) {
-        pagenum_t next_num = PageIO::HeaderPage::get_num_pages(header_ctrl_block->frame);
-        pagenum_t next_size = next_num * 2;
-        while (next_num < next_size)
-        {
-            page_t free_page;
-            PageIO::FreePage::set_next_free_pagenum(&free_page, pagenum);
-            pagenum = next_num;
-            file_write_page(table_id, next_num, &free_page);;
-            next_num++;
-        }
-        PageIO::HeaderPage::set_free_pagenum(header_ctrl_block->frame, pagenum);
-        PageIO::HeaderPage::set_num_pages(header_ctrl_block->frame, next_size);
+    pagenum_t pagenum = file_alloc_page(table_id);
+    if (header_ctrl_block != nullptr) {
+        file_read_page(table_id, 0, header_ctrl_block->frame);
     }
-
-    page_t page;
-    file_read_page(table_id, pagenum, &page);
-
-    PageIO::HeaderPage::set_free_pagenum(header_ctrl_block->frame, PageIO::FreePage::get_next_free_pagenum(&page));
-
-    header_ctrl_block->is_dirty |= 1;
     //pthread_mutex_unlock(&buffer_manager_latch);
     return pagenum;
+
+    // pagenum_t pagenum = PageIO::HeaderPage::get_free_pagenum(header_ctrl_block->frame);
+    // if (pagenum == 0) {
+    //     pagenum_t next_num = PageIO::HeaderPage::get_num_pages(header_ctrl_block->frame);
+    //     pagenum_t next_size = next_num * 2;
+    //     while (next_num < next_size)
+    //     {
+    //         page_t free_page;
+    //         PageIO::FreePage::set_next_free_pagenum(&free_page, pagenum);
+    //         pagenum = next_num;
+    //         file_write_page(table_id, next_num, &free_page);;
+    //         next_num++;
+    //     }
+    //     PageIO::HeaderPage::set_free_pagenum(header_ctrl_block->frame, pagenum);
+    //     PageIO::HeaderPage::set_num_pages(header_ctrl_block->frame, next_size);
+    // }
+
+    // page_t page;
+    // file_read_page(table_id, pagenum, &page);
+
+    // PageIO::HeaderPage::set_free_pagenum(header_ctrl_block->frame, PageIO::FreePage::get_next_free_pagenum(&page));
+
+    // header_ctrl_block->is_dirty |= 1;
+    // //pthread_mutex_unlock(&buffer_manager_latch);
+    // return pagenum;
 }
 
 void buf_free_page(int64_t table_id, pagenum_t page_number)
@@ -242,10 +245,10 @@ void buf_free_page(int64_t table_id, pagenum_t page_number)
     }
 
     // page already on the buffer
-    if (cur->is_pinned) {
-        std::cout << "[FATAL] Attempt to free page in use. The pin count = " << cur->is_pinned << std::endl;
-        exit(EXIT_FAILURE);
-    }
+    // if (cur->is_pinned) {
+    //     std::cout << "[FATAL] Attempt to free page in use. The pin count = " << cur->is_pinned << std::endl;
+    //     exit(EXIT_FAILURE);
+    // }
 
     pagemap.erase(std::make_pair(table_id, page_number));
 
@@ -256,7 +259,7 @@ void buf_free_page(int64_t table_id, pagenum_t page_number)
     cur->table_id = -1;
     cur->pagenum = 0;
     cur->is_dirty = 0;
-    cur->is_pinned = 0;
+    // cur->is_pinned = 0;
 
     free_page(table_id, page_number);
     //pthread_mutex_unlock(&buffer_manager_latch);
@@ -286,7 +289,7 @@ int buf_init_db(int num_buf) {
         buffer_ctrl_blocks[i]->table_id = -1;
         buffer_ctrl_blocks[i]->pagenum = 0;
         buffer_ctrl_blocks[i]->is_dirty = 0;
-        buffer_ctrl_blocks[i]->is_pinned = 0;
+        // buffer_ctrl_blocks[i]->is_pinned = 0;
         // buffer_ctrl_blocks[i]->page_latch = PTHREAD_MUTEX_INITIALIZER;
         buffer_ctrl_blocks[i]->next = buffer_ctrl_blocks[(i + num_buf - 1) % num_buf];
         buffer_ctrl_blocks[i]->prev = buffer_ctrl_blocks[(i + 1) % num_buf];
@@ -299,12 +302,12 @@ int buf_init_db(int num_buf) {
 
 
 int buf_shutdown_db() {
-    int total = 0;
-    int final_buffer_size = 0;
+    // int total = 0;
+    // int final_buffer_size = 0;
 
     for (int i = 0; i < buf_size; i++) {
         control_block_t* cur = buffer_ctrl_blocks[i];
-        total += cur->is_pinned;
+        // total += cur->is_pinned;
         if (cur->is_dirty > 0) {
             file_write_page(cur->table_id, cur->pagenum, cur->frame);
         }
@@ -317,6 +320,7 @@ int buf_shutdown_db() {
     std::cout << "[DEBUG] Total pin count on shutdown_db() = " << total << std::endl;
     std::cout << "[DEBUG] " << cache_hit << " hits out of " << tot_read << " read operations." << std::endl;
     #endif
-    return total == 0;
-}
+    return 0;
+    // return total == 0;
+    }
 

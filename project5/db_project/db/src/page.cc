@@ -1,4 +1,5 @@
 #include "page.h"
+#define DEBUG_MODE 0
 
 template<class T>
 void page_t::offsetCheck(uint16_t offset) {
@@ -10,14 +11,18 @@ void page_t::offsetCheck(uint16_t offset) {
 page_t::page_t() { std::fill_n(data, PAGE_SIZE, '\0'); };
 template<class T>
 T page_t::get_data(uint16_t offset) {
+    #if DEBUG_MODE
     offsetCheck<T>(offset);
-    T ret;
-    std::memcpy(&ret, data + offset, sizeof(T));
-    return ret;
+    #endif
+    T* ret = (T*)(data + offset);
+    // std::memcpy(&ret, data + offset, sizeof(T));
+    return *ret;
 }
 template<class T>
 void page_t::get_data(T* dest, uint16_t offset) {
+    #if DEBUG_MODE
     offsetCheck<T>(offset);
+    #endif
     std::memcpy(dest, data + offset, sizeof(T));
 }
 
@@ -27,7 +32,9 @@ void page_t::get_data(char* dest, uint16_t offset, uint16_t size) {
 
 template<class T>
 void page_t::set_data(const T src, uint16_t offset) {
+    #if DEBUG_MODE
     offsetCheck<T>(offset);
+    #endif
     std::memcpy(data + offset, &src, sizeof(T));
 }
 
@@ -61,7 +68,7 @@ void slot_t::set_offset(uint16_t offset) {
     std::memcpy(data + SLOT_OFFSET_OFFSET, &offset, sizeof(offset));
 }
 
-branch_factor_t::branch_factor_t() { std::fill_n(data, BRANCH_FACTOR_SIZE, '\0'); }
+branch_factor_t::branch_factor_t() { /*std::fill_n(data, BRANCH_FACTOR_SIZE, '\0');*/ }
 int64_t branch_factor_t::get_key() const {
     int64_t ret = 0;
     std::memcpy(&ret, data + BF_KEY_OFFSET, sizeof(ret));

@@ -30,13 +30,12 @@ pagenum_t find_leaf(int64_t table_id, pagenum_t root_pagenum, int64_t key) {
 
         int lo = 0;
         int hi = num_keys - 1;
-        while(lo <= hi){
+        while (lo <= hi) {
             int mid = (lo + hi) / 2;
-            if(key < PageIO::BPT::InternalPage::get_nth_branch_factor(ctrl_block->frame, mid).get_key()){
+            if (key < PageIO::BPT::InternalPage::get_nth_branch_factor(ctrl_block->frame, mid).get_key()) {
                 hi = mid - 1;
-                i = std::min(i, mid);
-            }
-            else{
+                i = mid;
+            } else {
                 lo = mid + 1;
             }
         }
@@ -83,9 +82,9 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
         if (slot.get_key() == key) {
             i = mid;
             break;
-        }         else if (slot.get_key() > key) {
+        } else if (slot.get_key() > key) {
             hi = mid - 1;
-        }         else {
+        } else {
             lo = mid + 1;
         }
     }
@@ -1265,7 +1264,7 @@ int db_delete(int64_t table_id, int64_t key) {
 }
 
 int init_db(int num_buf) {
-    if (num_buf < 300) num_buf = 300;
+    if (num_buf < 3) num_buf = 3;
     int err = 0;
     err += buf_init_db(num_buf);
     err += init_lock_table();
@@ -1364,13 +1363,13 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
     int lo = 0;
     int hi = num_keys - 1;
 
-    while(lo <= hi){
+    while (lo <= hi) {
         int mid = (lo + hi) / 2;
         slot = PageIO::BPT::LeafPage::get_nth_slot(ctrl_block->frame, mid);
-        if(slot.get_key() == key){
+        if (slot.get_key() == key) {
             i = mid;
             break;
-        } else if(slot.get_key() < key){
+        } else if (slot.get_key() < key) {
             lo = mid + 1;
         } else {
             hi = mid - 1;

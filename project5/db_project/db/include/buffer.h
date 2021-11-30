@@ -13,7 +13,7 @@ struct control_block_t {
     pagenum_t pagenum;
     int is_dirty;
     pthread_mutex_t page_latch;
-    int is_pinned; // Not deleted for simpler implementation: not modifying internal logic
+    // int is_pinned; // Not deleted for simpler implementation: not modifying internal logic
     control_block_t* next;
     control_block_t* prev;
 };
