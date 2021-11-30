@@ -1265,7 +1265,7 @@ int db_delete(int64_t table_id, int64_t key) {
 }
 
 int init_db(int num_buf) {
-    if (num_buf < 3) num_buf = 3;
+    if (num_buf < 300) num_buf = 300;
     int err = 0;
     err += buf_init_db(num_buf);
     err += init_lock_table();
