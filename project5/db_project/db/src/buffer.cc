@@ -125,6 +125,7 @@ control_block_t* add_new_page(int64_t table_id, pagenum_t page_number) {
     cur->table_id = table_id;
     cur->pagenum = page_number;
     cur->is_pinned++;
+    cur->is_dirty = 0;
     return cur;
 }
 
