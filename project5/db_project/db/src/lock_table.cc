@@ -101,6 +101,7 @@ int lock_release(lock_t* lock_obj) {
 		list->tail = NULL;
 	}
 	if (next != NULL) {
+		pthread_cond_signal(&next->lock_table_cond);
 		// wake_up(list);
 	}
 	delete lock_obj;

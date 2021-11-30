@@ -8,7 +8,7 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 set(DB_TESTS
-  concurrency_test.cc
+  # concurrency_test.cc
   # file_test.cc
   # bpt_test.cc
   # Add your test files here
