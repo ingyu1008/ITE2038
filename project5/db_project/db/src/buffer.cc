@@ -118,7 +118,6 @@ control_block_t* add_new_page(int64_t table_id, pagenum_t page_number) {
     if (cur->table_id >= 0)
         pagemap.erase(std::make_pair(cur->table_id, cur->pagenum));
     move_to_beg_of_list(cur);
-    pthread_mutex_unlock(&buffer_manager_latch);
 
     file_read_page(table_id, page_number, cur->frame);
     pagemap.emplace(std::make_pair(table_id, page_number), cur);
@@ -126,6 +125,7 @@ control_block_t* add_new_page(int64_t table_id, pagenum_t page_number) {
     cur->pagenum = page_number;
     // cur->is_pinned++;
     cur->is_dirty = 0;
+    pthread_mutex_unlock(&buffer_manager_latch);
     return cur;
 }
 
