@@ -24,7 +24,8 @@ void wake_up(hash_table_entry_t* list, lock_t* lock) {
 	lock_t* cur = list->head;
 	int record_id = lock->record_id;
 	int trx_id = lock->trx_id;
-	std::set<int> trx_ids;
+	int x = 0;
+	int y = 0;
 	while (cur != nullptr) {
 		if (cur->record_id != record_id) {
 			// pthread_cond_signal(&cur->lock_table_cond);
@@ -34,19 +35,20 @@ void wake_up(hash_table_entry_t* list, lock_t* lock) {
 		// pthread_cond_signal(&cur->lock_table_cond);
 		// break;
 
-		if(cur == lock){
+		if (cur == lock) {
 			cur = cur->next;
 			continue;
 		}
 		if (cur->lock_mode == LOCK_MODE_EXCLUSIVE) {
-			if (trx_ids.size() == 0 || (trx_ids.size() == 1 && trx_ids.find(cur->trx_id) != trx_ids.end())) {
+			if (x == 0 || (y == 0 && x == cur->trx_id)) {
 				// std::cout << "[DEBUG] wake up trx_id: " << cur->trx_id << std::endl;
 				print_locks(list);
 				pthread_cond_signal(&cur->lock_table_cond);
 			}
 			break;
 		} else {
-			trx_ids.insert(cur->trx_id);
+			if (x == 0) x = cur->trx_id;
+			else if (cur->trx_id != x) y = cur->trx_id;
 			pthread_cond_signal(&cur->lock_table_cond);
 			cur = cur->next;
 		}
@@ -148,9 +150,7 @@ int lock_release(lock_t* lock_obj) {
 	if (next == NULL) {
 		list->tail = NULL;
 	}
-	if (next != NULL) {
-		wake_up(list, lock_obj);
-	}
+	wake_up(list, lock_obj);
 	delete lock_obj;
 	pthread_mutex_unlock(&lock_table_latch);
 	return 0;
