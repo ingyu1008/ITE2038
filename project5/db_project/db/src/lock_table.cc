@@ -21,7 +21,7 @@ void print_locks(hash_table_entry_t* list) {
 }
 
 void wake_up(hash_table_entry_t* list, lock_t* lock) {
-	lock_t* cur = lock->next;
+	lock_t* cur = list->head;
 	int record_id = lock->record_id;
 	int trx_id = lock->trx_id;
 	std::set<int> trx_ids;
@@ -139,7 +139,6 @@ int lock_release(lock_t* lock_obj) {
 	lock_t* next = lock_obj->next;
 	hash_table_entry_t* list = lock_obj->sentinel;
 
-	wake_up(list, lock_obj);
 	if (prev != NULL) {
 		prev->next = next;
 	}
@@ -151,7 +150,7 @@ int lock_release(lock_t* lock_obj) {
 		list->tail = NULL;
 	}
 	if (next != NULL) {
-		// pthread_cond_signal(&next->lock_table_cond);
+		wake_up(list, lock_obj);
 	}
 	delete lock_obj;
 	pthread_mutex_unlock(&lock_table_latch);
