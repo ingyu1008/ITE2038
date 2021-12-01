@@ -100,7 +100,7 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
         return_ctrl_block(&ctrl_block);
         // std::cout << "[DEBUG] Page acquired: " << leaf << " by trx_id = " << trx_id << std::endl;
         // lock_t *lock = lock_acquire(table_id, leaf, key, trx_id, 0);
-        lock_t* lock = trx_acquire(table_id, leaf, key, trx_id, 0);
+        lock_t* lock = trx_acquire(table_id, leaf, i, trx_id, 0);
         if (lock == nullptr) {
             return -1;
         }
@@ -1385,7 +1385,7 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
         return 1;
     }
 
-    lock_t* lock = trx_acquire(table_id, leaf, key, trx_id, 1);
+    lock_t* lock = trx_acquire(table_id, leaf, i, trx_id, 1);
 
     if (lock == nullptr) {
         return_ctrl_block(&ctrl_block);

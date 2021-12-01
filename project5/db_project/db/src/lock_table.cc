@@ -11,27 +11,37 @@ std::unordered_map<std::pair<int64_t, int64_t>, hash_table_entry_t*, Hash> lock_
 
 
 void print_locks(hash_table_entry_t* list) {
-	#if DEBUG_MODE
+	// #if DEBUG_MODE
 	lock_t* lock = list->head;
 	while (lock != NULL) {
 		std::cout << "[DEBUG] lock_mode: " << lock->lock_mode << " record_id: " << lock->record_id << " trx_id: " << lock->trx_id << std::endl;
 		lock = lock->next;
 	}
-	#endif
+	// #endif
 }
 
 void wake_up(hash_table_entry_t* list, lock_t* lock) {
-	lock_t* cur = list->head;
+	lock_t* cur = lock->next;
 	int record_id = lock->record_id;
 	int trx_id = lock->trx_id;
 	std::set<int> trx_ids;
 	while (cur != nullptr) {
-		if (cur->record_id != record_id || cur == lock) {
+		// if (cur->record_id != record_id) {
+		// 	cur = cur->next;
+		// 	continue;
+		// }
+		// pthread_cond_signal(&cur->lock_table_cond);
+		// break;
+
+		if(cur == lock){
+			trx_ids.insert(cur->trx_id);
 			cur = cur->next;
 			continue;
 		}
 		if (cur->lock_mode == LOCK_MODE_EXCLUSIVE) {
 			if (trx_ids.size() == 0 || (trx_ids.size() == 1 && trx_ids.find(cur->trx_id) != trx_ids.end())) {
+				std::cout << "[DEBUG] wake up trx_id: " << cur->trx_id << std::endl;
+				print_locks(list);
 				pthread_cond_signal(&cur->lock_table_cond);
 			}
 			break;
@@ -52,9 +62,17 @@ void wake_up(hash_table_entry_t* list, lock_t* lock) {
 };
 
 bool conflict_exists(hash_table_entry_t* list, lock_t* lock) {
-	// return false;
+	return false;
 	// TODO implement
 	lock_t* curr = list->head;
+	// while (curr != nullptr) {
+	// 	if(curr == lock) return false;
+	// 	if (curr->record_id != lock->record_id || curr->trx_id == lock->trx_id || (lock->lock_mode | curr->lock_mode) == 0) {
+	// 		curr = curr->next;
+	// 		continue;
+	// 	}
+	// 	return true;
+	// }
 	while (curr != NULL) {
 		if (curr == lock) return false;
 		if (curr->trx_id != lock->trx_id && curr->record_id == lock->record_id && (lock->lock_mode | curr->lock_mode) == 1) {
