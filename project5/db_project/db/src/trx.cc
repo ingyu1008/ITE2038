@@ -94,9 +94,9 @@ void trx_abort(uint64_t trx_id) {
         while (temp_lock != nullptr) {
             // TODO implement roll back
             lock_t* next = temp_lock->trx_next;
-            pthread_mutex_unlock(&trx_table_latch);
+            // pthread_mutex_unlock(&trx_table_latch);
             lock_release(temp_lock);
-            pthread_mutex_lock(&trx_table_latch);
+            // pthread_mutex_lock(&trx_table_latch);
             temp_lock = next;
         }
         trx_table.erase(trx_id);
