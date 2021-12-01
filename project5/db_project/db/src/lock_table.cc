@@ -11,13 +11,13 @@ std::unordered_map<std::pair<int64_t, int64_t>, hash_table_entry_t*, Hash> lock_
 
 
 void print_locks(hash_table_entry_t* list) {
-	// #if DEBUG_MODE
+	#if DEBUG_MODE
 	lock_t* lock = list->head;
 	while (lock != NULL) {
 		std::cout << "[DEBUG] lock_mode: " << lock->lock_mode << " record_id: " << lock->record_id << " trx_id: " << lock->trx_id << std::endl;
 		lock = lock->next;
 	}
-	// #endif
+	#endif
 }
 
 void wake_up(hash_table_entry_t* list, lock_t* lock) {
