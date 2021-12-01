@@ -1387,12 +1387,11 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
 
     return_ctrl_block(&ctrl_block);
     lock_t* lock = trx_acquire(table_id, leaf, i, trx_id, 1);
-    ctrl_block = buf_read_page(table_id, leaf);
 
     if (lock == nullptr) {
-        return_ctrl_block(&ctrl_block);
         return -1;
     }
+    ctrl_block = buf_read_page(table_id, leaf);
 
     *old_val_size = slot.get_size();
 
@@ -1416,7 +1415,7 @@ int db_update(int64_t table_id, int64_t key, char* value, uint16_t val_size, uin
         return -1;
     } else if (err == 1) {
         #if DEBUG_MODE
-        std::cout << "[DEBUG] Could not find record key=" << key << std::endl;
+        std::cout << "[DEBUG] Could not find record table_id = " << table_id << ", key=" << key << std::endl;
         #endif
     }
     return 0;
