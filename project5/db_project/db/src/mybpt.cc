@@ -1379,13 +1379,12 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
             hi = mid - 1;
         }
     }
+    return_ctrl_block(&ctrl_block);
 
     if (i == num_keys) {
-        return_ctrl_block(&ctrl_block);
         return 1;
     }
 
-    return_ctrl_block(&ctrl_block);
     lock_t* lock = trx_acquire(table_id, leaf, i, trx_id, 1);
 
     if (lock == nullptr) {
