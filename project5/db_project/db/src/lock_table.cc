@@ -26,16 +26,19 @@ void wake_up(hash_table_entry_t* list, lock_t* lock) {
 	int trx_id = lock->trx_id;
 	std::set<int> trx_ids;
 	while (cur != nullptr) {
-		// if (cur->record_id != record_id) {
-		// 	cur = cur->next;
-		// 	continue;
-		// }
+		if (cur->record_id != record_id) {
+			cur = cur->next;
+			continue;
+		}
 		// pthread_cond_signal(&cur->lock_table_cond);
 		// break;
 
 		if(cur == lock){
 			trx_ids.insert(cur->trx_id);
 			cur = cur->next;
+			if(cur->lock_mode == LOCK_MODE_EXCLUSIVE){
+				break;
+			}
 			continue;
 		}
 		if (cur->lock_mode == LOCK_MODE_EXCLUSIVE) {
