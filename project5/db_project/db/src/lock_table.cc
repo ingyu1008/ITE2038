@@ -22,38 +22,38 @@ void print_locks(hash_table_entry_t* list) {
 }
 
 void wake_up(hash_table_entry_t* list, lock_t* lock) {
-	// lock_t* cur = list->head;
-	// int record_id = lock->record_id;
-	// int trx_id = lock->trx_id;
-	// int x = 0;
-	// int y = 0;
-	// while (cur != nullptr) {
-	// 	if (cur->record_id != record_id) {
-	// 		// pthread_cond_signal(&cur->lock_table_cond);
-	// 		cur = cur->next;
-	// 		continue;
-	// 	}
-	// 	// pthread_cond_signal(&cur->lock_table_cond);
-	// 	// break;
+	lock_t* cur = list->head;
+	int record_id = lock->record_id;
+	int trx_id = lock->trx_id;
+	int x = 0;
+	int y = 0;
+	while (cur != nullptr) {
+		if (cur->record_id != record_id) {
+			// pthread_cond_signal(&cur->lock_table_cond);
+			cur = cur->next;
+			continue;
+		}
+		// pthread_cond_signal(&cur->lock_table_cond);
+		// break;
 
-	// 	if (cur == lock) {
-	// 		cur = cur->next;
-	// 		continue;
-	// 	}
-	// 	if (cur->lock_mode == LOCK_MODE_EXCLUSIVE) {
-	// 		if (x == 0 || (y == 0 && x == cur->trx_id)) {
-	// 			// std::cout << "[DEBUG] wake up trx_id: " << cur->trx_id << std::endl;
-	// 			// print_locks(list);
-	// 			pthread_cond_signal(&cur->lock_table_cond);
-	// 		}
-	// 		break;
-	// 	} else {
-	// 		if (x == 0) x = cur->trx_id;
-	// 		else if (cur->trx_id != x) y = cur->trx_id;
-	// 		pthread_cond_signal(&cur->lock_table_cond);
-	// 		cur = cur->next;
-	// 	}
-	// }
+		if (cur == lock) {
+			cur = cur->next;
+			continue;
+		}
+		if (cur->lock_mode == LOCK_MODE_EXCLUSIVE) {
+			if (x == 0 || (y == 0 && x == cur->trx_id)) {
+				// std::cout << "[DEBUG] wake up trx_id: " << cur->trx_id << std::endl;
+				// print_locks(list);
+				pthread_cond_signal(&cur->lock_table_cond);
+			}
+			break;
+		} else {
+			if (x == 0) x = cur->trx_id;
+			else if (cur->trx_id != x) y = cur->trx_id;
+			pthread_cond_signal(&cur->lock_table_cond);
+			cur = cur->next;
+		}
+	}
 
 	// //TODO implement properly
 	// //This implementation just wake up everything
@@ -65,7 +65,7 @@ void wake_up(hash_table_entry_t* list, lock_t* lock) {
 };
 
 bool conflict_exists(hash_table_entry_t* list, lock_t* lock) {
-	return false;
+	// return false;
 	// TODO implement
 	lock_t* curr = list->head;
 	// while (curr != nullptr) {

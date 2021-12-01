@@ -7,7 +7,10 @@
 
 struct trx_entry_t;
 
-lock_t *trx_acquire(int64_t table_id, pagenum_t pagenum, int64_t key, uint64_t trx_id, int lock_mode);
+lock_t* trx_get_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t trx_id, int lock_mode);
+
+// void trx_acquire(int64_t table_id, pagenum_t pagenum, int64_t key, uint64_t trx_id, int lock_mode);
+void trx_acquire(uint64_t trx_id, lock_t* lock);
 void trx_abort(uint64_t trx_id);
 
 int trx_init();

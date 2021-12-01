@@ -59,7 +59,7 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
     #if DEBUG_MODE
     std::cout << "[INFO] find() called. key = " << key << std::endl;
     #endif
-    *val_size = 0;
+    * val_size = 0;
     pagenum_t leaf = find_leaf(table_id, root_pagenum, key);
 
     if (leaf == 0) return 1;
@@ -98,13 +98,24 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
 
     if (trx_id > 0) {
         return_ctrl_block(&ctrl_block);
-        // std::cout << "[DEBUG] Page acquired: " << leaf << " by trx_id = " << trx_id << std::endl;
-        // lock_t *lock = lock_acquire(table_id, leaf, key, trx_id, 0);
-        lock_t* lock = trx_acquire(table_id, leaf, i, trx_id, 0);
+        // // std::cout << "[DEBUG] Page acquired: " << leaf << " by trx_id = " << trx_id << std::endl;
+        // // lock_t *lock = lock_acquire(table_id, leaf, key, trx_id, 0);
+        // lock_t* lock = trx_acquire(table_id, leaf, i, trx_id, 0);
+        // if (lock == nullptr) {
+        //     return -1;
+        // }
+
+        lock_t* lock = trx_get_lock(table_id, leaf, i, trx_id, 0);
+
         if (lock == nullptr) {
-            return -1;
+            lock = lock_acquire(table_id, leaf, i, trx_id, 0);
+            if (lock == nullptr)
+                return -1;
+            trx_acquire(trx_id, lock);
         }
         ctrl_block = buf_read_page(table_id, leaf);
+
+
     }
 
     *val_size = slot.get_size();
@@ -546,17 +557,17 @@ pagenum_t insert(int64_t table_id, pagenum_t root_pagenum, int64_t key, const ch
 
     /* The current implementation ignores
      * duplicates.
-     * 
+     *
      * This was dealt with wrapper funciton
      */
-    // if (find(table_id, root_pagenum, key, buffer, &size) == 0) {
-    //     // This can be checked beforehand in db_insert().
-    //     return root_pagenum;
-    // }
+     // if (find(table_id, root_pagenum, key, buffer, &size) == 0) {
+     //     // This can be checked beforehand in db_insert().
+     //     return root_pagenum;
+     // }
 
-    /* Case: the tree does not exist yet.
-     * Start a new tree.
-     */
+     /* Case: the tree does not exist yet.
+      * Start a new tree.
+      */
     if (root_pagenum == 0) {
         return start_new_tree(table_id, key, data, sz);
     }
@@ -1267,7 +1278,7 @@ int db_delete(int64_t table_id, int64_t key) {
 }
 
 int init_db(int num_buf) {
-    if (num_buf < 2000) num_buf = 2000;
+    if (num_buf < 3) num_buf = 3;
     int err = 0;
     err += buf_init_db(num_buf);
     err += init_lock_table();
@@ -1385,10 +1396,13 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
         return 1;
     }
 
-    lock_t* lock = trx_acquire(table_id, leaf, i, trx_id, 1);
+    lock_t* lock = trx_get_lock(table_id, leaf, i, trx_id, 1);
 
     if (lock == nullptr) {
-        return -1;
+        lock = lock_acquire(table_id, leaf, i, trx_id, 1);
+        if (lock == nullptr)
+            return -1;
+        trx_acquire(trx_id, lock);
     }
     ctrl_block = buf_read_page(table_id, leaf);
 

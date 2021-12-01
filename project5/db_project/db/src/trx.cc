@@ -49,36 +49,36 @@ lock_t* trx_get_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t t
     return lock;
 }
 
-lock_t* trx_acquire(int64_t table_id, pagenum_t pagenum, int64_t key, uint64_t trx_id, int lock_mode) {
+void trx_acquire(uint64_t trx_id, lock_t* lock) {
     pthread_mutex_lock(&trx_table_latch);
-    lock_t* lock = trx_get_lock(table_id, pagenum, key, trx_id, lock_mode);
+    // lock_t* lock = trx_get_lock(table_id, pagenum, key, trx_id, lock_mode);
 
-    if (lock != nullptr) {
-        pthread_mutex_unlock(&trx_table_latch);
-        return lock;
-    }
+    // if (lock != nullptr) {
+    //     pthread_mutex_unlock(&trx_table_latch);
+    //     return lock;
+    // }
 
     auto it = trx_table.find(trx_id);
     if (it != trx_table.end()) {
-        #if DEBUG_MODE
-        std::cout << "[DEBUG] Found trx with trx_id = " << trx_id << ", record_id = " << key << std::endl;
-        #endif
+        //     #if DEBUG_MODE
+        //     std::cout << "[DEBUG] Found trx with trx_id = " << trx_id << ", record_id = " << key << std::endl;
+        //     #endif
         trx_entry_t* trx_entry = it->second;
 
-        pthread_mutex_unlock(&trx_table_latch);
-        lock = lock_acquire(table_id, pagenum, key, trx_id, lock_mode);
-        pthread_mutex_lock(&trx_table_latch);
-        if (lock != nullptr) {
-            lock->trx_next = trx_entry->lock;
-            trx_entry->lock = lock;
-        } else {
-            #if DEBUG_MODE
-            std::cout << "[ERROR] Failed to acquire lock" << std::endl;
-            #endif
-        }
+        //     pthread_mutex_unlock(&trx_table_latch);
+        //     lock = lock_acquire(table_id, pagenum, key, trx_id, lock_mode);
+        //     pthread_mutex_lock(&trx_table_latch);
+        //     if (lock != nullptr) {
+        lock->trx_next = trx_entry->lock;
+        trx_entry->lock = lock;
+        //     } else {
+        //         #if DEBUG_MODE
+        //         std::cout << "[ERROR] Failed to acquire lock" << std::endl;
+        //         #endif
+        //     }
     }
     pthread_mutex_unlock(&trx_table_latch);
-    return lock;
+    // return lock;
 }
 
 void trx_abort(uint64_t trx_id) {
