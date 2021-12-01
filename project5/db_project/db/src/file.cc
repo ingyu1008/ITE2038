@@ -5,7 +5,7 @@ std::vector<int> FileIO::opened_files;
 
 int FileIO::open(const char* filename)
 {
-    int fd = ::open(filename, O_RDWR | O_CREAT | O_SYNC, 0644);
+    int fd = ::open(filename, O_RDWR | O_CREAT, 0644);
     // std::cout << "[INFO] open(" << filename << ")" << std::endl;
     opened_files.push_back(fd);
     return fd;
@@ -20,7 +20,7 @@ off_t FileIO::size(int fd)
 void FileIO::write(int fd, const void* src, int n, int offset)
 {
     pwrite(fd, src, n, offset);
-    sync();
+    // sync();
 }
 void FileIO::read(int fd, void* dst, int n, int offset)
 {
@@ -50,6 +50,7 @@ int64_t file_open_table_file(const char* pathname)
         FileIO::write(fd, &header, PAGE_SIZE, 0);
     }
 
+    sync();
     return fd;
 }
 
@@ -81,6 +82,9 @@ pagenum_t file_alloc_page(int64_t table_id)
     PageIO::HeaderPage::set_free_pagenum(&header_page, PageIO::FreePage::get_next_free_pagenum(&free_page));
     FileIO::write(table_id, &header_page, PAGE_SIZE, 0);
 
+    
+    sync();
+
     return free_pagenum;
 }
 
@@ -97,18 +101,23 @@ void file_free_page(int64_t table_id, pagenum_t page_number)
 
     PageIO::HeaderPage::set_free_pagenum(&header_page, page_number);
     FileIO::write(table_id, &header_page, PAGE_SIZE, 0);
+    
+    sync();
 }
 
 // Read an on-disk page into the in-memory page structure(dest)
 void file_read_page(int64_t table_id, pagenum_t page_number, char* dest)
 {
     FileIO::read(table_id, dest, PAGE_SIZE, page_number * PAGE_SIZE);
+    
 }
 
 // Write an in-memory page(src) to the on-disk page
 void file_write_page(int64_t table_id, pagenum_t page_number, const char* src)
 {
     FileIO::write(table_id, src, PAGE_SIZE, page_number * PAGE_SIZE);
+    
+    sync();
 }
 
 // Stop referencing the database file
@@ -131,4 +140,6 @@ void file_read_page(int64_t table_id, pagenum_t page_number, page_t* dest){
 // Write an in-memory page(src) to the on-disk page
 void file_write_page(int64_t table_id, pagenum_t page_number, const page_t* src){
     file_write_page(table_id, page_number, reinterpret_cast<const char*>(src));
+    
+    sync();
 }
