@@ -124,7 +124,7 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
 		list->head = lock;
 	}
 	while (conflict_exists(list, lock)) {
-		std::cout << "[DEBUG] sleep!" << std::endl;
+		// std::cout << "[DEBUG] sleep!" << std::endl;
 		pthread_cond_wait(&lock->lock_table_cond, &lock_table_latch);
 	}
 	// print_locks(list);
