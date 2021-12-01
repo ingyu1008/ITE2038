@@ -1,6 +1,6 @@
 #include "lock_table.h"
 #include <set>
-#define DEBUG_MODE 0
+#define DEBUG_MODE 1
 
 constexpr int LOCK_MODE_EXCLUSIVE = 1;
 constexpr int LOCK_MODE_SHARED = 0;
@@ -12,11 +12,12 @@ std::unordered_map<std::pair<int64_t, int64_t>, hash_table_entry_t*, Hash> lock_
 
 void print_locks(hash_table_entry_t* list) {
 	#if DEBUG_MODE
-	// lock_t* lock = list->head;
-	// while (lock != NULL) {
-	// 	std::cout << "[DEBUG] lock_mode: " << lock->lock_mode << " record_id: " << lock->record_id << " trx_id: " << lock->trx_id << std::endl;
-	// 	lock = lock->next;
-	// }
+	std::cout << "[DEBUG] lock list: " << std::endl;
+	lock_t* lock = list->head;
+	while (lock != NULL) {
+		std::cout << "[DEBUG] lock_mode: " << lock->lock_mode << " record_id: " << lock->sentinel->page_id << ", " <<lock->record_id << " trx_id: " << lock->trx_id << std::endl;
+		lock = lock->next;
+	}
 	#endif
 }
 
@@ -42,7 +43,7 @@ void wake_up(hash_table_entry_t* list, lock_t* lock) {
 		if (cur->lock_mode == LOCK_MODE_EXCLUSIVE) {
 			if (x == 0 || (y == 0 && x == cur->trx_id)) {
 				// std::cout << "[DEBUG] wake up trx_id: " << cur->trx_id << std::endl;
-				print_locks(list);
+				// print_locks(list);
 				pthread_cond_signal(&cur->lock_table_cond);
 			}
 			break;
