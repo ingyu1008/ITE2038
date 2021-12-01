@@ -1385,7 +1385,9 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
         return 1;
     }
 
+    return_ctrl_block(&ctrl_block);
     lock_t* lock = trx_acquire(table_id, leaf, i, trx_id, 1);
+    ctrl_block = buf_read_page(table_id, leaf);
 
     if (lock == nullptr) {
         return_ctrl_block(&ctrl_block);

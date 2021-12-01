@@ -306,9 +306,7 @@ TEST(ConcurrencyCtrl, XLockOnlyDisjointTest) {
         pthread_join(threads[i], NULL);
     }
 
-    for(auto i:args){
-        free(i);
-    }
+    for(auto i:args){}
 
     EXPECT_EQ(shutdown_db(), 0);
 }
@@ -404,5 +402,24 @@ TEST(ConcurrencyCtrl, XLockOnlyTest) {
 
     
 
+    EXPECT_EQ(shutdown_db(), 0);
+}
+
+TEST(ConcurrencyCtrl, XLockOnlyTestCheck) {
+    EXPECT_EQ(init_db(BUF_SIZE), 0);
+    int table_id = open_table("XLockOnly.dat");
+
+    int n = 100;
+    int last_trx = 0;
+    uint16_t old_val_size = 0;
+    char buffer[MAX_VAL_SIZE];
+    int res = db_find(table_id, 1, buffer, &old_val_size);
+    char x = buffer[0];
+    for (int i = 1; i <= n; i++) {
+        int res = db_find(table_id, i, buffer, &old_val_size);
+        EXPECT_EQ(res, 0);
+        EXPECT_EQ(buffer[0], x);
+    }
+    
     EXPECT_EQ(shutdown_db(), 0);
 }

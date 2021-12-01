@@ -97,7 +97,9 @@ void trx_abort(uint64_t trx_id) {
             lock_release(temp_lock);
             temp_lock = next;
         }
+        trx_table.erase(trx_id);
     }
+
 
     pthread_mutex_unlock(&trx_table_latch);
 }
@@ -146,6 +148,7 @@ int trx_commit(int trx_id) {
             lock_release(lock);
             lock = tmp;
         }
+        trx_table.erase(trx_id);
         // pthread_mutex_destroy(trx_entry->trx_mutex); 
     }
     pthread_mutex_unlock(&trx_table_latch);
