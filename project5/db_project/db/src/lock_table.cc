@@ -1,6 +1,6 @@
 #include "lock_table.h"
 #include <set>
-#define DEBUG_MODE 1
+#define DEBUG_MODE 0
 
 constexpr int LOCK_MODE_EXCLUSIVE = 1;
 constexpr int LOCK_MODE_SHARED = 0;
@@ -65,7 +65,7 @@ void wake_up(hash_table_entry_t* list, lock_t* lock) {
 };
 
 bool conflict_exists(hash_table_entry_t* list, lock_t* lock) {
-	// return false;
+	return false;
 	// TODO implement
 	lock_t* curr = list->head;
 	// while (curr != nullptr) {
