@@ -198,40 +198,40 @@ pagenum_t buf_alloc_page(int64_t table_id) {
     pthread_mutex_lock(&buffer_manager_latch);
     control_block_t* header_ctrl_block = find_buffer(table_id, 0);
 
-    if (header_ctrl_block != nullptr) {
-        file_write_page(table_id, 0, header_ctrl_block->frame);
-    }
-    pagenum_t pagenum = file_alloc_page(table_id);
-    if (header_ctrl_block != nullptr) {
-        file_read_page(table_id, 0, header_ctrl_block->frame);
-    }
-    pthread_mutex_unlock(&buffer_manager_latch);
-    return pagenum;
-
-    // pagenum_t pagenum = PageIO::HeaderPage::get_free_pagenum(header_ctrl_block->frame);
-    // if (pagenum == 0) {
-    //     pagenum_t next_num = PageIO::HeaderPage::get_num_pages(header_ctrl_block->frame);
-    //     pagenum_t next_size = next_num * 2;
-    //     while (next_num < next_size)
-    //     {
-    //         page_t free_page;
-    //         PageIO::FreePage::set_next_free_pagenum(&free_page, pagenum);
-    //         pagenum = next_num;
-    //         file_write_page(table_id, next_num, &free_page);;
-    //         next_num++;
-    //     }
-    //     PageIO::HeaderPage::set_free_pagenum(header_ctrl_block->frame, pagenum);
-    //     PageIO::HeaderPage::set_num_pages(header_ctrl_block->frame, next_size);
+    // if (header_ctrl_block != nullptr) {
+    //     file_write_page(table_id, 0, header_ctrl_block->frame);
     // }
-
-    // page_t page;
-    // file_read_page(table_id, pagenum, &page);
-
-    // PageIO::HeaderPage::set_free_pagenum(header_ctrl_block->frame, PageIO::FreePage::get_next_free_pagenum(&page));
-
-    // header_ctrl_block->is_dirty |= 1;
-    // //pthread_mutex_unlock(&buffer_manager_latch);
+    // pagenum_t pagenum = file_alloc_page(table_id);
+    // if (header_ctrl_block != nullptr) {
+    //     file_read_page(table_id, 0, header_ctrl_block->frame);
+    // }
+    // pthread_mutex_unlock(&buffer_manager_latch);
     // return pagenum;
+
+    pagenum_t pagenum = PageIO::HeaderPage::get_free_pagenum(header_ctrl_block->frame);
+    if (pagenum == 0) {
+        pagenum_t next_num = PageIO::HeaderPage::get_num_pages(header_ctrl_block->frame);
+        pagenum_t next_size = next_num * 2;
+        while (next_num < next_size)
+        {
+            page_t free_page;
+            PageIO::FreePage::set_next_free_pagenum(&free_page, pagenum);
+            pagenum = next_num;
+            file_write_page(table_id, next_num, &free_page);;
+            next_num++;
+        }
+        PageIO::HeaderPage::set_free_pagenum(header_ctrl_block->frame, pagenum);
+        PageIO::HeaderPage::set_num_pages(header_ctrl_block->frame, next_size);
+    }
+
+    page_t page;
+    file_read_page(table_id, pagenum, &page);
+
+    PageIO::HeaderPage::set_free_pagenum(header_ctrl_block->frame, PageIO::FreePage::get_next_free_pagenum(&page));
+
+    header_ctrl_block->is_dirty |= 1;
+    //pthread_mutex_unlock(&buffer_manager_latch);
+    return pagenum;
 }
 
 void buf_free_page(int64_t table_id, pagenum_t page_number)
