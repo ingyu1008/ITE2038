@@ -50,7 +50,7 @@ lock_t* trx_get_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t t
 }
 
 void trx_acquire(uint64_t trx_id, lock_t* lock) {
-    pthread_mutex_lock(&trx_table_latch);
+    // pthread_mutex_lock(&trx_table_latch);
     // lock_t* lock = trx_get_lock(table_id, pagenum, key, trx_id, lock_mode);
 
     // if (lock != nullptr) {
@@ -69,6 +69,7 @@ void trx_acquire(uint64_t trx_id, lock_t* lock) {
         //     lock = lock_acquire(table_id, pagenum, key, trx_id, lock_mode);
         //     pthread_mutex_lock(&trx_table_latch);
         //     if (lock != nullptr) {
+        // TODO: change this to a proper list
         lock->trx_next = trx_entry->lock;
         trx_entry->lock = lock;
         //     } else {
@@ -77,7 +78,7 @@ void trx_acquire(uint64_t trx_id, lock_t* lock) {
         //         #endif
         //     }
     }
-    pthread_mutex_unlock(&trx_table_latch);
+    // pthread_mutex_unlock(&trx_table_latch);
     // return lock;
 }
 

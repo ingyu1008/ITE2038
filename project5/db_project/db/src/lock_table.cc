@@ -1,4 +1,5 @@
 #include "lock_table.h"
+#include "trx.h"
 #include <set>
 #define DEBUG_MODE 0
 
@@ -126,6 +127,9 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
 	if (list->head == nullptr) {
 		list->head = lock;
 	}
+	
+	trx_acquire(trx_id, lock);
+
 	while (conflict_exists(list, lock)) {
 		// std::cout << "[DEBUG] sleep!" << std::endl;
 		pthread_cond_wait(&lock->lock_table_cond, &lock_table_latch);

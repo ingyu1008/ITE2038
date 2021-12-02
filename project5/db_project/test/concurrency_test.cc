@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 #define BUF_SIZE 200
 #define DEBUG_MODE 0
+#define N 1000
 
 TEST(ConcurrencyCtrl, SingleThread) {
     EXPECT_EQ(init_db(BUF_SIZE), 0);
@@ -17,7 +18,7 @@ TEST(ConcurrencyCtrl, SingleThread) {
 
     int table_id = open_table("singleThreaded.dat");
 
-    int n = 100;
+    int n = N;
 
     for (int i = 1; i <= n; i++) {
         #if DEBUG_MODE
@@ -82,7 +83,7 @@ TEST(ConcurrencyCtrl, SingleThreadRandom) {
 
     int table_id = open_table("singleThreaded.dat");
 
-    int n = 100;
+    int n = N;
 
     for (int i = 1; i <= n; i++) {
         #if DEBUG_MODE
@@ -172,7 +173,7 @@ void* slock_only(void* arg) {
     EXPECT_GT(trx_id, 0);
 
     int table_id = *((int*)arg);
-    int n = 100;
+    int n = N;
     int err = 0;
     uint16_t val_size;
     for (int i = 1; i <= n; i++) {
@@ -182,9 +183,6 @@ void* slock_only(void* arg) {
         int res = db_find(table_id, i, ret_val, &val_size, trx_id);
         EXPECT_EQ(res, 0);
         EXPECT_NE(val_size, 0);
-        for (int j = 0; j < val_size; j++) {
-            EXPECT_EQ(ret_val[j], data[j]);
-        }
     }
 
     trx_commit(trx_id);
@@ -201,7 +199,7 @@ TEST(ConcurrencyCtrl, SLockOnlyTest) {
 
     int table_id = open_table("SLockOnly.dat");
 
-    int n = 1000;
+    int n = N;
 
     for (int i = 1; i <= n; i++) {
         #if DEBUG_MODE
@@ -238,7 +236,7 @@ void* xlock_only_disjoint(void* arg) {
     EXPECT_GT(trx_id, 0);
 
     int table_id = ((int*)arg)[0];
-    int n = 1000;
+    int n = N;
     int err = 0;
     uint16_t val_size;
     int st = ((int*)arg)[1];
@@ -271,7 +269,7 @@ TEST(ConcurrencyCtrl, XLockOnlyDisjointTest) {
 
     int table_id = open_table("XLockOnly.dat");
 
-    int n = 1000;
+    int n = N;
 
     for (int i = 1; i <= n; i++) {
         #if DEBUG_MODE
@@ -306,7 +304,9 @@ TEST(ConcurrencyCtrl, XLockOnlyDisjointTest) {
         pthread_join(threads[i], NULL);
     }
 
-    for(auto i:args){}
+    for(auto i:args){
+        free(i);
+    }
 
     EXPECT_EQ(shutdown_db(), 0);
 }
@@ -316,7 +316,7 @@ TEST(ConcurrencyCtrl, XLockOnlyDisjointTestCheck) {
 
     int table_id = open_table("XLockOnly.dat");
 
-    int n = 1000;
+    int n = N;
     
     for (int i = 1; i <= n; i++) {
         std::string data = "12345678901234567890123456789012345678901234567890" + std::to_string(i);
@@ -324,6 +324,7 @@ TEST(ConcurrencyCtrl, XLockOnlyDisjointTestCheck) {
         char buffer[MAX_VAL_SIZE] = "\0";
         int res = db_find(table_id, i, buffer, &old_val_size);
         EXPECT_EQ(res, 0);
+        EXPECT_NE(old_val_size, 0);
         for (int j = 0; j < old_val_size; j++) {
             EXPECT_EQ(buffer[j], data[j]);
         }
@@ -336,18 +337,19 @@ void* xlock_only(void* arg) {
     int trx_id = trx_begin();
     EXPECT_GT(trx_id, 0);
 
-    int table_id = *((int*)arg);
-    int n = 100;
+    int table_id = ((int*)arg)[0];
+    int n = N;
     int err = 0;
     uint16_t val_size;
     std::string s[10] = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"};
     for (int i = 1; i <= n; i++) {
         // char ret_val[112] = "\0";
         std::string data = s[trx_id%10] + "2345678901234567890123456789012345678901234567890" + std::to_string(i);
-        uint16_t old_val_size = 0;
-        int res = db_update(table_id, i, const_cast<char*>(data.c_str()), data.length(), &old_val_size, trx_id);
+        uint16_t *old_val_size = (uint16_t*)malloc(sizeof(uint16_t));
+        int res = db_update(table_id, i, const_cast<char*>(data.c_str()), data.length(), old_val_size, trx_id);
         EXPECT_EQ(res, 0);
-        EXPECT_NE(old_val_size, 0);
+        EXPECT_NE(*old_val_size, 0);
+        free(old_val_size);
         // res = db_find(table_id, i, ret_val, &old_val_size);
         // EXPECT_EQ(res, 0);
 
@@ -371,7 +373,7 @@ TEST(ConcurrencyCtrl, XLockOnlyTest) {
 
     int table_id = open_table("XLockOnly.dat");
 
-    int n = 100;
+    int n = N;
 
     for (int i = 1; i <= n; i++) {
         #if DEBUG_MODE
@@ -387,19 +389,26 @@ TEST(ConcurrencyCtrl, XLockOnlyTest) {
     int m = 10;
     uint16_t val_size;
     pthread_t threads[m];
+    std::vector<int*> args;
     // pthread_attr_t attr;
     // pthread_attr_setstacksize(&attr, 128 * 1024 * 1024);
     for (int i = 0; i < m; i++) {
         #if DEBUG_MODE
         std::cout << "[DEBUG] Create thread " << i << std::endl;
         #endif
-        pthread_create(&threads[i], NULL, xlock_only, &table_id);
+        int *arg = (int*)malloc(sizeof(int));
+        *arg = table_id;
+        args.push_back(arg);
+        pthread_create(&threads[i], NULL, xlock_only, arg);
     }
 
     for (int i = 0; i < m; i++) {
         pthread_join(threads[i], NULL);
     }
 
+    for(auto i:args){
+        free(i);
+    }
     
 
     EXPECT_EQ(shutdown_db(), 0);
@@ -409,7 +418,7 @@ TEST(ConcurrencyCtrl, XLockOnlyTestCheck) {
     EXPECT_EQ(init_db(BUF_SIZE), 0);
     int table_id = open_table("XLockOnly.dat");
 
-    int n = 100;
+    int n = N;
     int last_trx = 0;
     uint16_t old_val_size = 0;
     char buffer[MAX_VAL_SIZE];
@@ -423,3 +432,151 @@ TEST(ConcurrencyCtrl, XLockOnlyTestCheck) {
     
     EXPECT_EQ(shutdown_db(), 0);
 }
+
+TEST(ConcurrencyCtrl, MixedLockTest) {
+    EXPECT_EQ(init_db(BUF_SIZE), 0);
+
+    if (std::remove("MixedLock.dat") == 0)
+    {
+        std::cout << "[INFO] File 'MixedLock.dat' already exists. Deleting it." << std::endl;
+    }
+
+    int table_id = open_table("MixedLock.dat");
+
+    int n = N;
+
+    for (int i = 1; i <= n; i++) {
+        #if DEBUG_MODE
+        std::cout << "[DEBUG] Inserting key = " << i << std::endl;
+        #endif
+        std::string data = "01234567890123456789012345678901234567890123456789" + std::to_string(i);
+        int res = db_insert(table_id, i, const_cast<char*>(data.c_str()), data.length());
+        EXPECT_EQ(res, 0);
+    }
+
+    std::cout << "[INFO] Population done, now testing MixedLock Test" << std::endl;
+
+    int m = 10;
+    uint16_t val_size;
+    pthread_t threads[m];
+    // pthread_attr_t attr;
+    // pthread_attr_setstacksize(&attr, 128 * 1024 * 1024);
+    for (int i = 0; i < m; i++) {
+        #if DEBUG_MODE
+        std::cout << "[DEBUG] Create thread " << i << std::endl;
+        #endif
+        if(i &1){
+            pthread_create(&threads[i], NULL, xlock_only, &table_id);
+        }
+        else{
+            pthread_create(&threads[i], NULL, slock_only, &table_id);
+        }
+    }
+
+    for (int i = 0; i < m; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
+    EXPECT_EQ(shutdown_db(), 0);
+}
+
+TEST(ConcurrencyCtrl, MixedLockTestCheck) {
+    EXPECT_EQ(init_db(BUF_SIZE), 0);
+    int table_id = open_table("MixedLock.dat");
+
+    int n = N;
+    int last_trx = 0;
+    uint16_t old_val_size = 0;
+    char buffer[MAX_VAL_SIZE];
+    int res = db_find(table_id, 1, buffer, &old_val_size);
+    char x = buffer[0];
+    for (int i = 1; i <= n; i++) {
+        int res = db_find(table_id, i, buffer, &old_val_size);
+        EXPECT_EQ(res, 0);
+        EXPECT_EQ(buffer[0], x);
+    }
+    
+    EXPECT_EQ(shutdown_db(), 0);
+}
+
+
+// void* deadlock_test(void* arg) {
+//     int trx_id = trx_begin();
+//     EXPECT_GT(trx_id, 0);
+
+//     int table_id = ((int*)arg)[0];
+//     int n = N;
+//     int err = 0;
+//     uint16_t val_size;
+//     std::string s[10] = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"};
+//     for (int i = 1; i <= n; i++) {
+//         // char ret_val[112] = "\0";
+//         std::string data = s[trx_id%10] + "2345678901234567890123456789012345678901234567890" + std::to_string(i);
+//         uint16_t *old_val_size = (uint16_t*)malloc(sizeof(uint16_t));
+//         int res = db_update(table_id, i, const_cast<char*>(data.c_str()), data.length(), old_val_size, trx_id);
+//         EXPECT_EQ(res, 0);
+//         EXPECT_NE(*old_val_size, 0);
+//         free(old_val_size);
+//         // res = db_find(table_id, i, ret_val, &old_val_size);
+//         // EXPECT_EQ(res, 0);
+
+//         // for (int j = 0; j < val_size; j++) {
+//         //     EXPECT_EQ(ret_val[j], data[j]);
+//         // }
+//     }
+
+//     trx_commit(trx_id);
+//     return NULL;
+// }
+
+
+// TEST(ConcurrencyCtrl, XLockOnlyTest) {
+//     EXPECT_EQ(init_db(BUF_SIZE), 0);
+
+//     if (std::remove("XLockOnly.dat") == 0)
+//     {
+//         std::cout << "[INFO] File 'XLockOnly.dat' already exists. Deleting it." << std::endl;
+//     }
+
+//     int table_id = open_table("XLockOnly.dat");
+
+//     int n = N;
+
+//     for (int i = 1; i <= n; i++) {
+//         #if DEBUG_MODE
+//         std::cout << "[DEBUG] Inserting key = " << i << std::endl;
+//         #endif
+//         std::string data = "01234567890123456789012345678901234567890123456789" + std::to_string(i);
+//         int res = db_insert(table_id, i, const_cast<char*>(data.c_str()), data.length());
+//         EXPECT_EQ(res, 0);
+//     }
+
+//     std::cout << "[INFO] Population done, now testing XLockOnly Test" << std::endl;
+
+//     int m = 10;
+//     uint16_t val_size;
+//     pthread_t threads[m];
+//     std::vector<int*> args;
+//     // pthread_attr_t attr;
+//     // pthread_attr_setstacksize(&attr, 128 * 1024 * 1024);
+//     for (int i = 0; i < m; i++) {
+//         #if DEBUG_MODE
+//         std::cout << "[DEBUG] Create thread " << i << std::endl;
+//         #endif
+//         int *arg = (int*)malloc(sizeof(int));
+//         *arg = table_id;
+//         args.push_back(arg);
+//         pthread_create(&threads[i], NULL, xlock_only, arg);
+//     }
+
+//     for (int i = 0; i < m; i++) {
+//         pthread_join(threads[i], NULL);
+//     }
+
+//     for(auto i:args){
+//         free(i);
+//     }
+    
+
+//     EXPECT_EQ(shutdown_db(), 0);
+// }

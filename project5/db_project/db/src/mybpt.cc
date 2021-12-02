@@ -111,7 +111,7 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
             lock = lock_acquire(table_id, leaf, i, trx_id, 0);
             if (lock == nullptr)
                 return -1;
-            trx_acquire(trx_id, lock);
+            // trx_acquire(trx_id, lock);
         }
         ctrl_block = buf_read_page(table_id, leaf);
 
@@ -1402,7 +1402,7 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
         lock = lock_acquire(table_id, leaf, i, trx_id, 1);
         if (lock == nullptr)
             return -1;
-        trx_acquire(trx_id, lock);
+        // trx_acquire(trx_id, lock);
     }
     ctrl_block = buf_read_page(table_id, leaf);
 
