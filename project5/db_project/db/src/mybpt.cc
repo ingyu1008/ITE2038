@@ -1407,7 +1407,13 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
     ctrl_block = buf_read_page(table_id, leaf);
 
     *old_val_size = slot.get_size();
+    if(lock->original_size == 0){
+        lock->original_size = *old_val_size;
+        lock->original_value = (char*)malloc(sizeof(char)* (*old_val_size+ 1));
 
+        ctrl_block->frame->get_data(lock->original_value, slot.get_offset(), *old_val_size);
+        lock->original_value[*old_val_size] = '\0';
+    }
     ctrl_block->frame->set_data(value, slot.get_offset(), val_size);
 
     return_ctrl_block(&ctrl_block, 1);

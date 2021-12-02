@@ -1,11 +1,7 @@
 #include "trx.h"
+#include "buffer.h"
 #define DEBUG_MODE 0
 
-struct trx_entry_t {
-    uint64_t trx_id;
-    // pthread_mutex_t trx_mutex; // Not needed for project 5
-    lock_t* lock;
-};
 uint64_t trx_id = 1;
 
 pthread_mutex_t trx_table_latch;
@@ -33,24 +29,24 @@ void print_trx_list(int trx_id) {
 lock_t* trx_get_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t trx_id, int lock_mode) {
     lock_t* lock = nullptr;
 
-    // auto it = trx_table.find(trx_id);
-    // if (it != trx_table.end()) {
-    //     trx_entry_t* trx_entry = it->second;
-    //     lock_t* temp_lock = trx_entry->lock;
-    //     while (temp_lock != nullptr) {
-    //         if (temp_lock->trx_id == trx_id && temp_lock->sentinel->table_id == table_id && temp_lock->sentinel->page_id == pagenum && temp_lock->record_id == key && temp_lock->lock_mode == lock_mode) {
-    //             lock = temp_lock;
-    //             break;
-    //         }
-    //         temp_lock = temp_lock->trx_next;
-    //     }
-    // }
+    auto it = trx_table.find(trx_id);
+    if (it != trx_table.end()) {
+        trx_entry_t* trx_entry = it->second;
+        lock_t* temp_lock = trx_entry->lock;
+        while (temp_lock != nullptr) {
+            if (temp_lock->trx_id == trx_id && temp_lock->sentinel->table_id == table_id && temp_lock->sentinel->page_id == pagenum && temp_lock->record_id == key && temp_lock->lock_mode >= lock_mode) {
+                lock = temp_lock;
+                break;
+            }
+            temp_lock = temp_lock->trx_next;
+        }
+    }
 
     return lock;
 }
 
 void trx_acquire(uint64_t trx_id, lock_t* lock) {
-    // pthread_mutex_lock(&trx_table_latch);
+    pthread_mutex_lock(&trx_table_latch);
     // lock_t* lock = trx_get_lock(table_id, pagenum, key, trx_id, lock_mode);
 
     // if (lock != nullptr) {
@@ -78,7 +74,7 @@ void trx_acquire(uint64_t trx_id, lock_t* lock) {
         //         #endif
         //     }
     }
-    // pthread_mutex_unlock(&trx_table_latch);
+    pthread_mutex_unlock(&trx_table_latch);
     // return lock;
 }
 
@@ -93,7 +89,17 @@ void trx_abort(uint64_t trx_id) {
         trx_entry_t* trx_entry = it->second;
         lock_t* temp_lock = trx_entry->lock;
         while (temp_lock != nullptr) {
-            // TODO implement roll back
+            
+            if(temp_lock->original_value != nullptr) {                
+                control_block_t* ctrl_block = buf_read_page(temp_lock->sentinel->table_id, temp_lock->sentinel->page_id);
+                slot_t slot = PageIO::BPT::LeafPage::get_nth_slot(ctrl_block->frame, temp_lock->record_id);
+
+                // std::cout << "[DEBUG] roll back value: " << temp_lock->original_value << std::endl;
+
+                ctrl_block->frame->set_data(temp_lock->original_value, slot.get_offset(), temp_lock->original_size);
+                return_ctrl_block(&ctrl_block, 1);
+            }
+
             lock_t* next = temp_lock->trx_next;
             // pthread_mutex_unlock(&trx_table_latch);
             lock_release(temp_lock);
