@@ -230,7 +230,7 @@ pagenum_t buf_alloc_page(int64_t table_id) {
     PageIO::HeaderPage::set_free_pagenum(header_ctrl_block->frame, PageIO::FreePage::get_next_free_pagenum(&page));
 
     header_ctrl_block->is_dirty |= 1;
-    //pthread_mutex_unlock(&buffer_manager_latch);
+    pthread_mutex_unlock(&buffer_manager_latch);
     return pagenum;
 }
 
