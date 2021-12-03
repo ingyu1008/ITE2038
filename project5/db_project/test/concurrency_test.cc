@@ -517,6 +517,8 @@ void* deadlock_test(void* arg) {
     std::mt19937 gen(2020011776 + trx_id);
     std::shuffle(v.begin(), v.end(), gen);
 
+    bool aborted = false;
+
     for (int i : v) {
         // char ret_val[112] = "\0";
         std::string data = s[trx_id%10] + "2345678901234567890123456789012345678901234567890" + std::to_string(i);
@@ -524,11 +526,13 @@ void* deadlock_test(void* arg) {
         int res = db_update(table_id, i, const_cast<char*>(data.c_str()), data.length(), old_val_size, trx_id);
         free(old_val_size);
         if(res){
-            return NULL;
+            std::cout << "[DEBUG] ABORTED" << std::endl;
+            aborted = true;
+            break;
         }
     }
-
-    trx_commit(trx_id);
+    if(!aborted) trx_commit(trx_id);
+    std::cout << "[DEBUG] Thread " << trx_id << " done" << std::endl;
     return NULL;
 }
 
@@ -561,8 +565,8 @@ TEST(ConcurrencyCtrl, DeadlockTest) {
     uint16_t val_size;
     pthread_t threads[m];
     std::vector<int*> args;
-    pthread_attr_t attr;
-    pthread_attr_setstacksize(&attr, 1024 * 1024 * 1024);
+    // pthread_attr_t attr;
+    // pthread_attr_setstacksize(&attr, 1024 * 1024 * 1024);
     for (int i = 0; i < m; i++) {
         #if DEBUG_MODE
         std::cout << "[DEBUG] Create thread " << i << std::endl;
