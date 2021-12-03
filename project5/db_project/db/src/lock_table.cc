@@ -1,10 +1,10 @@
 #include "lock_table.h"
 #include "trx.h"
 #include <set>
-#define DEBUG_MODE 1
+#define DEBUG_MODE 0
 
-constexpr int LOCK_MODE_EXCLUSIVE = 1;
-constexpr int LOCK_MODE_SHARED = 0;
+#define LOCK_MODE_EXCLUSIVE 1
+#define LOCK_MODE_SHARED 0
 
 pthread_mutex_t lock_table_latch;
 
@@ -64,62 +64,6 @@ void wake_up(hash_table_entry_t* list, lock_t* lock) {
 	// }
 };
 
-lock_t* conflict_exists(hash_table_entry_t* list, lock_t* lock) {
-	// return false;
-	// TODO implement
-	lock_t* curr = list->head;
-	// while (curr != nullptr) {
-	// 	if(curr == lock) return false;
-	// 	if (curr->record_id != lock->record_id || curr->trx_id == lock->trx_id || (lock->lock_mode | curr->lock_mode) == 0) {
-	// 		curr = curr->next;
-	// 		continue;
-	// 	}
-	// 	return true;
-	// }
-	while (curr != nullptr) {
-		if (curr == lock) return nullptr;
-		if (curr->trx_id != lock->trx_id && curr->record_id == lock->record_id && (lock->lock_mode | curr->lock_mode) == 1) {
-			#if DEBUG_MODE
-			std::cout << "[DEBUG] conflict! " << curr->lock_mode << ", " << lock->lock_mode << ", " << curr->record_id << ", " << curr->trx_id << ", " << lock->trx_id << std::endl;
-			#endif
-			print_locks(list);
-			return curr;
-		}
-		curr = curr->next;
-	}
-	return nullptr;
-}
-
-bool detect_deadlock(hash_table_entry_t* list, lock_t* lock) {
-	// return false;
-	// TODO implement
-	pthread_mutex_lock(&trx_table_latch);
-	
-
-	// std::cout << "[DEBUG] lock == nullptr " << (lock == nullptr) << std::endl;
-	// lock_t* curr = lock->prev;
-	// while (curr != nullptr) {
-	// 	// std::cout << "[DEBUG] curr == nullptr " << (curr == nullptr) << std::endl;
-
-	// 	trx_entry_t *trx = trx_table[curr->trx_id];
-	// 	if(trx != nullptr) {
-	// 		lock_t* waiting = trx->lock;
-
-	// 		// std::cout << "[DEBUG] waiting == nullptr " << (waiting == nullptr) << std::endl;
-	
-	// 		while(waiting != nullptr){
-	// 			if (waiting->trx_id == lock->trx_id) {
-	// 				pthread_mutex_unlock(&trx_table_latch);
-	// 				return true;
-	// 			}
-	// 			waiting = waiting->trx_next;
-	// 		}
-	// 	}
-	// 	curr = curr->prev;
-	// }
-	pthread_mutex_unlock(&trx_table_latch);
-	return false;
-}
 
 int init_lock_table() {
 	lock_table_latch = PTHREAD_MUTEX_INITIALIZER;
@@ -141,10 +85,6 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
 	}
 	lock_t* lock = new lock_t();
 
-	pthread_mutex_unlock(&lock_table_latch);
-	trx_acquire(trx_id, lock);
-	pthread_mutex_lock(&lock_table_latch);	
-
 	lock->next = nullptr;
 	lock->prev = list->tail;
 	lock->sentinel = list;
@@ -161,17 +101,12 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
 	if (list->head == nullptr) {
 		list->head = lock;
 	}
+	
+	// pthread_mutex_unlock(&lock_table_latch);
+	// trx_acquire(trx_id, lock);
+	// pthread_mutex_lock(&lock_table_latch);	
 
-
-	while (conflict_exists(list, lock) != nullptr) {
-		// std::cout << "[DEBUG] sleep!" << std::endl;
-		if (detect_deadlock(list, lock)) {
-			// std::cout << "[DEBUG] deadlock!" << std::endl;
-			pthread_mutex_unlock(&lock_table_latch);
-			return nullptr;
-		}
-		pthread_cond_wait(&lock->lock_table_cond, &lock_table_latch);
-	}
+	
 	// print_locks(list);
 	pthread_mutex_unlock(&lock_table_latch);
 	return lock;

@@ -197,7 +197,8 @@ TEST(ConcurrencyCtrl, SLockOnlyTest) {
         std::cout << "[INFO] File 'SLockOnly.dat' already exists. Deleting it." << std::endl;
     }
 
-    int table_id = open_table("SLockOnly.dat");
+    int *table_id = (int*)malloc(sizeof(int)); 
+    *table_id = open_table("SLockOnly.dat");
 
     int n = N;
 
@@ -206,7 +207,7 @@ TEST(ConcurrencyCtrl, SLockOnlyTest) {
         std::cout << "[DEBUG] Inserting key = " << i << std::endl;
         #endif
         std::string data = "01234567890123456789012345678901234567890123456789" + std::to_string(i);
-        int res = db_insert(table_id, i, const_cast<char*>(data.c_str()), data.length());
+        int res = db_insert(*table_id, i, const_cast<char*>(data.c_str()), data.length());
         EXPECT_EQ(res, 0);
     }
 
@@ -221,7 +222,7 @@ TEST(ConcurrencyCtrl, SLockOnlyTest) {
         #if DEBUG_MODE
         std::cout << "[DEBUG] Create thread " << i << std::endl;
         #endif
-        pthread_create(&threads[i], NULL, slock_only, &table_id);
+        pthread_create(&threads[i], NULL, slock_only, table_id);
     }
 
     for (int i = 0; i < m; i++) {
