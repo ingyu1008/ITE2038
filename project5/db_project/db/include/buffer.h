@@ -13,20 +13,21 @@ struct control_block_t {
     pagenum_t pagenum;
     int is_dirty;
     pthread_mutex_t page_latch;
-    // int is_pinned; // Not deleted for simpler implementation: not modifying internal logic
     control_block_t* next;
     control_block_t* prev;
 };
 
-void return_ctrl_block(control_block_t** ctrl_block, int is_dirty = 0);
+// Helper Functions
+void move_to_beg_of_list(control_block_t* cur);
+control_block_t* find_buffer(int64_t table_id, pagenum_t page_number);
+control_block_t* find_victim();
+control_block_t* add_new_page(int64_t table_id, pagenum_t page_number);
+void free_page(int64_t table_id, pagenum_t page_number);
 
-// Simple
+// APIs
 int64_t buf_open_table_file(const char* pathname);
-
-// Straight Forward
+void buf_return_ctrl_block(control_block_t** ctrl_block, int is_dirty = 0);
 control_block_t* buf_read_page(int64_t table_id, pagenum_t page_number);
-
-// Complicated
 pagenum_t buf_alloc_page(int64_t table_id);
 void buf_free_page(int64_t table_id, pagenum_t page_number);
 

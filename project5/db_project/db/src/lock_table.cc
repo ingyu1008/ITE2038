@@ -3,24 +3,9 @@
 #include <set>
 #define DEBUG_MODE 0
 
-#define LOCK_MODE_EXCLUSIVE 1
-#define LOCK_MODE_SHARED 0
-
 pthread_mutex_t lock_table_latch;
 
 std::unordered_map<std::pair<int64_t, int64_t>, hash_table_entry_t*, Hash> lock_table;
-
-
-void print_locks(hash_table_entry_t* list) {
-	#if DEBUG_MODE
-	std::cout << "[DEBUG] lock list: " << std::endl;
-	lock_t* lock = list->head;
-	while (lock != NULL) {
-		std::cout << "[DEBUG] lock_mode: " << lock->lock_mode << " record_id: " << lock->sentinel->page_id << ", " << lock->record_id << " trx_id: " << lock->trx_id << std::endl;
-		lock = lock->next;
-	}
-	#endif
-}
 
 void wake_up(hash_table_entry_t* list, lock_t* lock) {
 	lock_t* cur = list->head;
@@ -30,20 +15,14 @@ void wake_up(hash_table_entry_t* list, lock_t* lock) {
 	int y = 0;
 	while (cur != nullptr) {
 		if (cur->record_id != record_id || cur->trx_id == lock->trx_id) {
-			// pthread_cond_signal(&cur->lock_table_cond);
 			cur = cur->next;
 			continue;
 		}
-		// pthread_cond_signal(&cur->lock_table_cond);
-		// break;
 		if (cur->lock_mode == LOCK_MODE_EXCLUSIVE) {
-			// if(cur->original_value == nullptr){
-			// 	cur->original_value = (char*)malloc(sizeof(char) * lock->original_size);
-			// 	memcpy(cur->original_value, lock->original_value, lock->original_size);
-			// }
 			if (x == 0 || (y == 0 && x == cur->trx_id)) {
-				// std::cout << "[DEBUG] wake up trx_id: " << cur->trx_id << std::endl;
-				// print_locks(list);
+				#if DEBUG_MODE
+				std::cout << "[DEBUG] wake up trx_id: " << cur->trx_id << std::endl;
+				#endif
 				pthread_cond_signal(&cur->lock_table_cond);
 			}
 			break;
@@ -54,25 +33,28 @@ void wake_up(hash_table_entry_t* list, lock_t* lock) {
 			cur = cur->next;
 		}
 	}
-
-	// //TODO implement properly
-	// //This implementation just wake up everything
-	// lock_t* lock = list->head;
-	// while (lock != NULL) {
-	// 	pthread_cond_signal(&lock->lock_table_cond);
-	// 	lock = lock->next;
-	// }
 };
 
 
 int init_lock_table() {
-	lock_table_latch = PTHREAD_MUTEX_INITIALIZER;
+	// lock_table_latch = PTHREAD_MUTEX_INITIALIZER;
+	pthread_mutex_init(&lock_table_latch, NULL);
+	return 0;
+}
+
+int shutdown_lock_table() { 
+	for(auto it = lock_table.begin(); it != lock_table.end();) {
+		hash_table_entry_t* list = it->second;
+		// ASSUME THE LIST IS EMPTY
+		delete list;
+		lock_table.erase(it++);
+	}
+	pthread_mutex_destroy(&lock_table_latch);
 	return 0;
 }
 
 lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_id, int lock_mode) {
 	pthread_mutex_lock(&lock_table_latch);
-	// std::cout << "[DEBUG] lock_acquire: " << table_id << ", " << page_id << ", " << key << ", " << trx_id << ", " << lock_mode << std::endl;
 	std::pair<int64_t, int64_t> p(table_id, page_id);
 	hash_table_entry_t* list = lock_table[p];
 	if (list == nullptr) {
@@ -88,12 +70,13 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
 	lock->next = nullptr;
 	lock->prev = list->tail;
 	lock->sentinel = list;
-	lock->lock_table_cond = PTHREAD_COND_INITIALIZER;
+	pthread_cond_init(&lock->lock_table_cond, NULL);
 	lock->lock_mode = lock_mode;
 	lock->record_id = key;
 	lock->trx_id = trx_id;
 	lock->original_value = nullptr;
 	lock->original_size = 0;
+
 	if (list->tail != nullptr) {
 		list->tail->next = lock;
 	}
@@ -102,27 +85,18 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
 		list->head = lock;
 	}
 	
-	// pthread_mutex_unlock(&lock_table_latch);
-	// trx_acquire(trx_id, lock);
-	// pthread_mutex_lock(&lock_table_latch);	
-
-	
-	// print_locks(list);
 	pthread_mutex_unlock(&lock_table_latch);
 	return lock;
 };
 
 int lock_release(lock_t* lock_obj) {
-	// std::cout << "ee" << std::endl;
 	pthread_mutex_lock(&lock_table_latch);
 	lock_t* prev = lock_obj->prev;
 	lock_t* next = lock_obj->next;
 	hash_table_entry_t* list = lock_obj->sentinel;
 
-	// std::cout << "ff" << std::endl;
 	wake_up(list, lock_obj);
 	
-	// std::cout << "gg" << std::endl;
 	if (prev != nullptr) {
 		prev->next = next;
 	}
@@ -135,10 +109,13 @@ int lock_release(lock_t* lock_obj) {
 	if (list->tail == lock_obj) {
 		list->tail = prev;
 	}
+
+	pthread_cond_destroy(&lock_obj->lock_table_cond);
 	if(lock_obj->original_value != nullptr) {
 		free(lock_obj->original_value);
 	}
 	delete lock_obj;
+	
 	pthread_mutex_unlock(&lock_table_latch);
 	return 0;
 }

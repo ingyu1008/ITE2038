@@ -55,7 +55,10 @@ int shutdown_db();
 
 void db_print_tree(int64_t table_id);
 
-// Newly Added API
+// Newly Added Helper Function
+int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, uint16_t val_size, uint16_t* old_val_size, int trx_id);
+
+// Newly Added API from Project 5
 int db_find(int64_t table_id, int64_t key, char* ret_val, uint16_t* val_size, int trx_id);
 int db_update(int64_t table_id, int64_t key, char* value, uint16_t val_size, uint16_t* old_val_size, int trx_id);
 

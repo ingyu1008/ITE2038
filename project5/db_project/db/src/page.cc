@@ -1,28 +1,14 @@
 #include "page.h"
 #define DEBUG_MODE 0
 
-template<class T>
-void page_t::offsetCheck(uint16_t offset) {
-    if (offset + sizeof(T) > PAGE_SIZE) {
-        std::cout << "[ERROR]: Invalid Offset at get_data() offset = " << offset << std::endl;
-        throw std::invalid_argument("Offset is out of range.");
-    }
-}
 page_t::page_t() { std::fill_n(data, PAGE_SIZE, '\0'); };
 template<class T>
 T page_t::get_data(uint16_t offset) {
-    #if DEBUG_MODE
-    offsetCheck<T>(offset);
-    #endif
     T* ret = (T*)(data + offset);
-    // std::memcpy(&ret, data + offset, sizeof(T));
     return *ret;
 }
 template<class T>
 void page_t::get_data(T* dest, uint16_t offset) {
-    #if DEBUG_MODE
-    offsetCheck<T>(offset);
-    #endif
     std::memcpy(dest, data + offset, sizeof(T));
 }
 
@@ -32,9 +18,6 @@ void page_t::get_data(char* dest, uint16_t offset, uint16_t size) {
 
 template<class T>
 void page_t::set_data(const T src, uint16_t offset) {
-    #if DEBUG_MODE
-    offsetCheck<T>(offset);
-    #endif
     std::memcpy(data + offset, &src, sizeof(T));
 }
 
