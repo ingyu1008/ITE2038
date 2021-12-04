@@ -82,22 +82,11 @@ bool detect_deadlock(int trx_id) {
 }
 
 lock_t* trx_get_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t trx_id, int lock_mode) {
-    
-    lock_t* lock = nullptr;
+    pthread_mutex_lock(&trx_table_latch);
 
-    // auto it = trx_table.find(trx_id);
-    // if (it != trx_table.end()) {
-    //     trx_entry_t* trx_entry = it->second;
-    //     lock_t* temp_lock = trx_entry->lock;
-    //     while (temp_lock != nullptr) {
-    //         if (temp_lock->trx_id == trx_id && temp_lock->sentinel->table_id == table_id && temp_lock->sentinel->page_id == pagenum && temp_lock->record_id == key && temp_lock->lock_mode >= lock_mode) {
-    //             lock = temp_lock;
-    //             break;
-    //         }
-    //         temp_lock = temp_lock->trx_next;
-    //     }
-    // }
+    lock_t* lock = trx_table[trx_id]->locks[{{table_id, pagenum}, key}];
 
+    pthread_mutex_unlock(&trx_table_latch);
     return lock;
 }
 
@@ -115,6 +104,8 @@ lock_t* trx_acquire(uint64_t trx_id, lock_t* lock) {
         lock->trx_next = trx_entry->lock;
         trx_entry->lock = lock;
     }
+
+    it->second->locks[{{lock->sentinel->table_id, lock->sentinel->page_id}, lock->record_id}] = lock;
 
     hash_table_entry_t* list = lock->sentinel;
 

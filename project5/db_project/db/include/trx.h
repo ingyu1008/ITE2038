@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <unordered_map>
 #include <set>
+#include <map>
 #include <stack>
 
 struct trx_entry_t{
@@ -12,6 +13,7 @@ struct trx_entry_t{
     // pthread_mutex_t trx_mutex; // Not needed for project 5, only one thread per trx
     lock_t* lock;
     std::set<uint64_t> wait_for;
+    std::map<std::pair<std::pair<int64_t, pagenum_t>, int64_t>, lock_t*> locks;
 };
 
 // Helper Functions
