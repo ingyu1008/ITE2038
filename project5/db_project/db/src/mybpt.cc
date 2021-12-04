@@ -1366,16 +1366,23 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
             return -1;
         
     }
+
+    auto opt = trx_find_log(table_id, leaf, i, trx_id);
+
     ctrl_block = buf_read_page(table_id, leaf);
-
     *old_val_size = slot.get_size();
-    if(lock->original_size == 0){
-        lock->original_size = *old_val_size;
-        lock->original_value = (char*)malloc(sizeof(char)* (*old_val_size+ 1));
 
-        ctrl_block->frame->get_data(lock->original_value, slot.get_offset(), *old_val_size);
-        lock->original_value[*old_val_size] = '\0';
+    if(!opt.has_value()) {
+        std::pair<uint16_t, char*> log;
+        log.first = *old_val_size;
+        log.second = (char*)malloc(log.first);
+        ctrl_block->frame->get_data(log.second, slot.get_offset(), *old_val_size);
+        buf_return_ctrl_block(&ctrl_block);
+
+        trx_add_log(table_id, leaf, i, trx_id, log);
+        ctrl_block = buf_read_page(table_id, leaf);
     }
+
     ctrl_block->frame->set_data(value, slot.get_offset(), val_size);
 
     buf_return_ctrl_block(&ctrl_block, 1);

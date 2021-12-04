@@ -81,6 +81,38 @@ bool detect_deadlock(int trx_id) {
 	return false;
 }
 
+void release_locks(trx_entry_t* trx) {
+    lock_t* lock = trx->lock;
+    while (lock != nullptr) {
+        lock_t* tmp = lock->trx_next;
+        lock_release(lock);
+        lock = tmp;
+    }
+}
+
+std::optional<std::pair<uint16_t, char*>> trx_find_log(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t trx_id){
+    pthread_mutex_lock(&trx_table_latch);
+
+    auto it = trx_table[trx_id]->logs.find({{table_id, pagenum}, key});
+    if(it == trx_table[trx_id]->logs.end()) {
+        pthread_mutex_unlock(&trx_table_latch);
+        return std::nullopt;
+    }
+
+    auto p = it->second;
+
+    pthread_mutex_unlock(&trx_table_latch);
+    return std::optional<std::pair<uint16_t, char*>>(p);
+}
+
+void trx_add_log(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t trx_id, std::pair<uint16_t, char*> log){
+    pthread_mutex_lock(&trx_table_latch);
+
+    trx_table[trx_id]->logs[{{table_id, pagenum}, key}] = log;
+
+    pthread_mutex_unlock(&trx_table_latch);
+}
+
 lock_t* trx_get_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t trx_id, int lock_mode) {
     pthread_mutex_lock(&trx_table_latch);
 
@@ -137,25 +169,19 @@ void trx_abort(uint64_t trx_id) {
     auto it = trx_table.find(trx_id);
     if (it != trx_table.end()) {
         trx_entry_t* trx_entry = it->second;
-        lock_t* temp_lock = trx_entry->lock;
-        while (temp_lock != nullptr) {
-            if(temp_lock->original_value != nullptr) {          
-                control_block_t* ctrl_block = buf_read_page(temp_lock->sentinel->table_id, temp_lock->sentinel->page_id);
-                slot_t slot = PageIO::BPT::LeafPage::get_nth_slot(ctrl_block->frame, temp_lock->record_id);
 
-                #if DEBUG_MODE
-                std::cout << "[DEBUG] roll back value: " << temp_lock->original_value << std::endl;
-                #endif
+        for(auto x: trx_entry->logs){
+            auto key = x.first;
+            auto log = x.second;
 
-                ctrl_block->frame->set_data(temp_lock->original_value, slot.get_offset(), temp_lock->original_size);
-                buf_return_ctrl_block(&ctrl_block, 1);
-            }
+            control_block_t* ctrl_block = buf_read_page(key.first.first, key.first.second);
+            slot_t slot = PageIO::BPT::LeafPage::get_nth_slot(ctrl_block->frame, key.second);
 
-            lock_t* next = temp_lock->trx_next;
-                  
-            lock_release(temp_lock);
-            temp_lock = next;
+            ctrl_block->frame->set_data(log.second, slot.get_offset(), log.first);
+            buf_return_ctrl_block(&ctrl_block, 1);
         }
+
+        release_locks(trx_entry);
         
         delete trx_entry;
         trx_table.erase(trx_id);
@@ -200,13 +226,8 @@ int trx_commit(int trx_id) {
     auto it = trx_table.find(trx_id);
     if (it != trx_table.end()) {
         trx_entry_t* trx_entry = it->second;
-        lock_t* lock = trx_entry->lock;
-        while (lock != nullptr) {
-            lock_t* tmp = lock->trx_next;
+        release_locks(trx_entry);
 
-            lock_release(lock);
-            lock = tmp;
-        }
         delete trx_entry;
         trx_table.erase(trx_id);
     }

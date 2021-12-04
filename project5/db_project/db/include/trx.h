@@ -7,6 +7,7 @@
 #include <set>
 #include <map>
 #include <stack>
+#include <optional>
 
 struct trx_entry_t{
     uint64_t trx_id;
@@ -14,16 +15,19 @@ struct trx_entry_t{
     lock_t* lock;
     std::set<uint64_t> wait_for;
     std::map<std::pair<std::pair<int64_t, pagenum_t>, int64_t>, lock_t*> locks;
+    std::map<std::pair<std::pair<int64_t, pagenum_t>, int64_t>, std::pair<uint16_t, char*>> logs;
 };
 
 // Helper Functions
 bool conflict_exists(hash_table_entry_t* list, lock_t* lock);
 void update_wait_for_graph(hash_table_entry_t* list, lock_t* lock);
 bool detect_deadlock(int trx_id);
-lock_t* trx_get_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t trx_id, int lock_mode);
-
+void release_locks(trx_entry_t* trx);
 
 // API Supported
+std::optional<std::pair<uint16_t, char*>> trx_find_log(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t trx_id);
+void trx_add_log(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t trx_id, std::pair<uint16_t, char*> log);
+lock_t* trx_get_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t trx_id, int lock_mode);
 lock_t* trx_acquire(uint64_t trx_id, lock_t* lock);
 void trx_abort(uint64_t trx_id);
 
