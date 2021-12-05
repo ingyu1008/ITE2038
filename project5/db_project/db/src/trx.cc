@@ -29,7 +29,7 @@ bool conflict_exists(hash_table_entry_t* list, lock_t* lock) {
 void update_wait_for_graph(hash_table_entry_t* list, lock_t* lock) {
     lock_t* cur = lock->prev;
     while (cur != nullptr) {
-        if ((cur->bitmap & ((((uint64_t)1) << lock->record_id))) == 0) {
+        if ((cur->bitmap & lock->bitmap) == 0) {
             cur = cur->prev;
             continue;
         }
@@ -140,6 +140,13 @@ lock_t* trx_get_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t t
 
     pthread_mutex_unlock(&trx_table_latch);
     return lock;
+}
+void trx_add_to_locks(int trx_id, int64_t key, lock_t* lock){
+    pthread_mutex_lock(&trx_table_latch);
+
+    trx_table[trx_id]->locks[{ {lock->sentinel->table_id, lock->sentinel->page_id}, { key, lock->lock_mode }}] = lock;
+
+    pthread_mutex_unlock(&trx_table_latch);
 }
 
 void trx_add_to_locks(int trx_id, lock_t* lock){
