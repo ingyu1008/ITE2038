@@ -88,6 +88,7 @@ void release_locks(trx_entry_t* trx) {
         lock_release(lock);
         lock = tmp;
     }
+    trx->locks.clear();
 }
 
 void add_to_trx_list(trx_entry_t *trx, hash_table_entry_t *list, lock_t* lock){

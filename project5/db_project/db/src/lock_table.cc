@@ -112,10 +112,6 @@ int lock_release(lock_t* lock_obj) {
 	}
 
 	pthread_cond_destroy(&lock_obj->lock_table_cond);
-	
-	trx_entry_t *trx = trx_table[lock_obj->trx_id];
-
-	trx->locks.erase({{lock_obj->sentinel->table_id, lock_obj->sentinel->page_id}, {lock_obj->record_id, lock_obj->lock_mode}});
 
 	delete lock_obj;
 	
@@ -155,20 +151,23 @@ lock_t* lock_acquire_compressed(int64_t table_id, pagenum_t page_id, int64_t key
 	}
 
 	lock_t* cur = list->head;
+	lock_t* me = nullptr;
 	while (cur != nullptr) {
 		if(cur->lock_mode == LOCK_MODE_EXCLUSIVE && cur->trx_id != trx_id){
 			pthread_mutex_unlock(&lock_table_latch);
 			return nullptr;
 		}
 		if (cur->lock_mode == LOCK_MODE_SHARED && cur->trx_id == trx_id) {
-			cur->bitmap |= (((uint64_t)1) << key);
-			pthread_mutex_unlock(&lock_table_latch);
-			return cur;
+			me = cur;
 		}
 		cur = cur->next;
 	}
 
+	if(me != nullptr){
+		me->bitmap |= (((uint64_t)1) << key);
+	}
+
 
 	pthread_mutex_unlock(&lock_table_latch);
-	return nullptr;
+	return me;
 }
