@@ -29,7 +29,7 @@ bool conflict_exists(hash_table_entry_t* list, lock_t* lock) {
 void update_wait_for_graph(hash_table_entry_t* list, lock_t* lock) {
     lock_t* cur = lock->prev;
     while (cur != nullptr) {
-        if (cur->record_id != lock->record_id) {
+        if ((cur->bitmap & ((((uint64_t)1) << lock->record_id))) == 0) {
             cur = cur->prev;
             continue;
         }

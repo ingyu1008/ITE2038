@@ -26,6 +26,7 @@ struct lock_t{
 	lock_t* wait_for;
 	char* original_value;
 	int original_size;
+	uint64_t bitmap; // maximum of 62 records in a page so uint64_t is enough
 };
 
 struct Hash{
@@ -50,6 +51,7 @@ void wake_up(hash_table_entry_t* list, lock_t* lock);
 
 /* APIs for lock table */
 int init_lock_table();
+lock_t* lock_acquire_compressed(int64_t table_id, pagenum_t page_id, int64_t key, int trx_id);
 int shutdown_lock_table();
 lock_t *lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_id, int lock_mode);
 int lock_release(lock_t* lock_obj);
