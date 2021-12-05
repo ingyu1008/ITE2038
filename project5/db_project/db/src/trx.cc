@@ -142,6 +142,14 @@ lock_t* trx_get_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t t
     return lock;
 }
 
+void trx_add_to_locks(int trx_id, lock_t* lock){
+    pthread_mutex_lock(&trx_table_latch);
+
+    trx_table[trx_id]->locks[{ {lock->sentinel->table_id, lock->sentinel->page_id}, { lock->record_id, lock->lock_mode }}] = lock;
+
+    pthread_mutex_unlock(&trx_table_latch);
+}
+
 trx_entry_t* trx_check_active(int trx_id) {
     auto it = trx_table.find(trx_id);
     if (it != trx_table.end()) {

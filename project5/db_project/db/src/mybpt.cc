@@ -110,6 +110,7 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
             #if DEBUG_MODE
             std::cout << "[DEBUG] acquired compressed lock!" << std::endl;
             #endif
+            trx_add_to_locks(trx_id, lock);
         }
 
         ctrl_block = buf_read_page(table_id, leaf);
