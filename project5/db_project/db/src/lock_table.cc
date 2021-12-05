@@ -14,7 +14,7 @@ void wake_up(hash_table_entry_t* list, lock_t* lock) {
 	int x = 0;
 	int y = 0;
 	while (cur != nullptr) {
-		if ((cur->bitmap & ((((uint64_t)1) << record_id))) == 0 || cur->trx_id == lock->trx_id) {
+		if ((cur->bitmap & lock->bitmap) == 0 || cur->trx_id == lock->trx_id) {
 			cur = cur->next;
 			continue;
 		}
@@ -133,7 +133,7 @@ bool lock_exist(int64_t table_id, int64_t page_id, int64_t key, int trx_id){
 	}
 	lock_t* cur = list->head;
 	while (cur != nullptr) {
-		if (cur->record_id == key /* && cur->trx_id != trx_id */) {
+		if ((cur->bitmap & (((uint64_t)1) << key)) > 0 /* && cur->trx_id != trx_id */) {
 			pthread_mutex_unlock(&lock_table_latch);
 			return true;
 		}
