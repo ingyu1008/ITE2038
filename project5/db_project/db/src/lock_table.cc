@@ -111,12 +111,33 @@ int lock_release(lock_t* lock_obj) {
 	}
 
 	pthread_cond_destroy(&lock_obj->lock_table_cond);
-	if(lock_obj->original_value != nullptr) {
-		free(lock_obj->original_value);
-	}
+	
+	trx_entry_t *trx = trx_table[lock_obj->trx_id];
+
+	trx->locks.erase({{lock_obj->sentinel->table_id, lock_obj->sentinel->page_id}, {lock_obj->record_id, lock_obj->lock_mode}});
+
 	delete lock_obj;
 	
 	pthread_mutex_unlock(&lock_table_latch);
 	return 0;
 }
 
+bool lock_exist(int64_t table_id, int64_t page_id, int64_t key, int trx_id){
+	pthread_mutex_lock(&lock_table_latch);
+	std::pair<int64_t, int64_t> p(table_id, page_id);
+	hash_table_entry_t* list = lock_table[p];
+	if (list == nullptr) {
+		pthread_mutex_unlock(&lock_table_latch);
+		return false;
+	}
+	lock_t* cur = list->head;
+	while (cur != nullptr) {
+		if (cur->record_id == key /* && cur->trx_id != trx_id */) {
+			pthread_mutex_unlock(&lock_table_latch);
+			return true;
+		}
+		cur = cur->next;
+	}
+	pthread_mutex_unlock(&lock_table_latch);
+	return false;
+}

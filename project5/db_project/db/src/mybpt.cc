@@ -91,25 +91,23 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
 
 
     if (trx_id > 0) {
-        buf_return_ctrl_block(&ctrl_block);
-        // // std::cout << "[DEBUG] Page acquired: " << leaf << " by trx_id = " << trx_id << std::endl;
-        // // lock_t *lock = lock_acquire(table_id, leaf, key, trx_id, 0);
-        // lock_t* lock = trx_acquire(table_id, leaf, i, trx_id, 0);
-        // if (lock == nullptr) {
-        //     return -1;
-        // }
+        // buf_return_ctrl_block(&ctrl_block);
 
-        lock_t* lock = trx_get_lock(table_id, leaf, i, trx_id, 0);
-
-        if (lock == nullptr) {
-            lock = lock_acquire(table_id, leaf, i, trx_id, 0);
-            lock = trx_acquire(trx_id, lock);
-            if (lock == nullptr)
-                return -1;
+        if(!lock_exist(table_id, leaf, i, trx_id)){
+            // ctrl_block = buf_read_page(table_id, leaf);
+            int trx_written = slot.get_trx_id();
+            
+            trx_implicit_to_explicit(table_id, leaf, i, trx_id, trx_written);
         }
+        
+        buf_return_ctrl_block(&ctrl_block);
+
+        int res = acquire_lock(table_id, leaf, i, trx_id, 0);
+        if(res < 0){
+            return -1;
+        }
+
         ctrl_block = buf_read_page(table_id, leaf);
-
-
     }
 
     *val_size = slot.get_size();
@@ -395,6 +393,7 @@ pagenum_t insert_into_leaf(int64_t table_id, pagenum_t leaf_pagenum, int64_t key
     slot.set_key(key);
     slot.set_offset(offset);
     slot.set_size(size);
+    slot.set_trx_id(0);
     PageIO::BPT::LeafPage::set_nth_slot(ctrl_block->frame, insertion_point, slot);
 
     ctrl_block->frame->set_data(data, offset, size);
@@ -467,6 +466,7 @@ pagenum_t insert_into_leaf_after_splitting(int64_t table_id, pagenum_t root_page
         slot.set_key(keys[i].first);
         slot.set_offset(offset);
         slot.set_size(size);
+        slot.set_trx_id(0);
         PageIO::BPT::LeafPage::set_nth_slot(ctrl_block->frame, i, slot);
         ctrl_block->frame->set_data(buffer, offset, size);
         free_space -= SLOT_SIZE + size;
@@ -493,6 +493,7 @@ pagenum_t insert_into_leaf_after_splitting(int64_t table_id, pagenum_t root_page
         slot.set_key(keys[i].first);
         slot.set_offset(offset);
         slot.set_size(size);
+        slot.set_trx_id(0);
         PageIO::BPT::LeafPage::set_nth_slot(right_ctrl_block->frame, j, slot);
         right_ctrl_block->frame->set_data(buffer, offset, size);
         free_space -= SLOT_SIZE + size;
@@ -526,6 +527,7 @@ pagenum_t start_new_tree(int64_t table_id, int64_t key, const char* data, uint16
     slot.set_key(key);
     slot.set_offset(offset);
     slot.set_size(size);
+    slot.set_trx_id(0);
     PageIO::BPT::LeafPage::set_nth_slot(ctrl_block->frame, 0, slot);
     ctrl_block->frame->set_data(data, offset, size);
     PageIO::BPT::LeafPage::set_amount_free_space(ctrl_block->frame, INITIAL_FREE_SPACE - size - SLOT_SIZE);
@@ -1314,6 +1316,18 @@ void print_tree(int64_t table_id, pagenum_t pagenum) {
 /*** Newly Implemented from Project 5 ****************************************/
 /******************************************************************************/
 
+int acquire_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int trx_id, int lock_mode){
+    lock_t* lock = trx_get_lock(table_id, pagenum, key, trx_id, lock_mode);
+
+    if (lock == nullptr) {
+        lock = lock_acquire(table_id, pagenum, key, trx_id, lock_mode);
+        lock = trx_acquire(trx_id, lock);
+        if (lock == nullptr)
+            return -1;   
+    }
+    return 0;
+}
+
 int db_find(int64_t table_id, int64_t key, char* ret_val, uint16_t* val_size, int trx_id) {
     control_block_t* header_ctrl_block = buf_read_page(table_id, 0);
     pagenum_t root_pagenum = PageIO::HeaderPage::get_root_pagenum(header_ctrl_block->frame);
@@ -1357,14 +1371,32 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
         return 1;
     }
 
-    lock_t* lock = trx_get_lock(table_id, leaf, i, trx_id, 1);
-
-    if (lock == nullptr) {
-        lock = lock_acquire(table_id, leaf, i, trx_id, 1);
-        lock = trx_acquire(trx_id, lock);
-        if (lock == nullptr)
+    if(lock_exist(table_id, leaf, i, trx_id)){
+        int res = acquire_lock(table_id, leaf, i, trx_id, 1);
+        if(res < 0){
             return -1;
+        }
+    } else {
+        // TODO: implicit locking
+        ctrl_block = buf_read_page(table_id, leaf);
+        int trx_written = slot.get_trx_id();
         
+        int res = trx_implicit_to_explicit(table_id, leaf, i, trx_id, trx_written);
+
+        if(res){
+            // Implicit to Explicit Failed
+            // Create New Explicit Lock
+            slot.set_trx_id(trx_id);
+            PageIO::BPT::LeafPage::set_nth_slot(ctrl_block->frame, i, slot);
+            buf_return_ctrl_block(&ctrl_block, 1);
+        } else {
+            // Implicit to Explicit Worked
+            buf_return_ctrl_block(&ctrl_block);
+            res = acquire_lock(table_id, leaf, i, trx_id, 1);
+            if(res < 0){
+                return -1;
+            }
+        }
     }
 
     auto opt = trx_find_log(table_id, leaf, i, trx_id);

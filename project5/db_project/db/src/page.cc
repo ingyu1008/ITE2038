@@ -41,6 +41,12 @@ uint16_t slot_t::get_offset() const {
     std::memcpy(&ret, data + SLOT_OFFSET_OFFSET, sizeof(ret));
     return ret;
 }
+int slot_t::get_trx_id() const {
+    int ret;
+    std::memcpy(&ret, data + SLOT_TRX_ID_OFFSET, sizeof(ret));
+    return ret;
+}
+
 void slot_t::set_key(int64_t key) {
     std::memcpy(data + SLOT_KEY_OFFSET, &key, sizeof(key));
 }
@@ -49,6 +55,9 @@ void slot_t::set_size(uint16_t size) {
 }
 void slot_t::set_offset(uint16_t offset) {
     std::memcpy(data + SLOT_OFFSET_OFFSET, &offset, sizeof(offset));
+}
+void slot_t::set_trx_id(int trx_id) {
+    std::memcpy(data + SLOT_TRX_ID_OFFSET, &trx_id, sizeof(trx_id));
 }
 
 branch_factor_t::branch_factor_t() { /*std::fill_n(data, BRANCH_FACTOR_SIZE, '\0');*/ }

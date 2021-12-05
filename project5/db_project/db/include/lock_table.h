@@ -53,6 +53,7 @@ int init_lock_table();
 int shutdown_lock_table();
 lock_t *lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_id, int lock_mode);
 int lock_release(lock_t* lock_obj);
+bool lock_exist(int64_t table_id, int64_t page_id, int64_t key, int trx_id);
 
 extern std::unordered_map<std::pair<int64_t, int64_t>, hash_table_entry_t*, Hash> lock_table;
 

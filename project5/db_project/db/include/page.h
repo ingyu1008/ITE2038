@@ -11,7 +11,7 @@ typedef uint64_t pagenum_t;
 
 constexpr uint64_t INITIAL_SIZE = 10485760; // 10 MiB
 constexpr uint64_t PAGE_SIZE = 4096;
-constexpr uint64_t SLOT_SIZE = 12;
+constexpr uint64_t SLOT_SIZE = 16;
 constexpr uint64_t BRANCH_FACTOR_SIZE = 16;
 constexpr pagenum_t INITIAL_FREE_PAGES = (INITIAL_SIZE / PAGE_SIZE) - 1;
 constexpr uint64_t INITIAL_FREE_SPACE = PAGE_SIZE - 128;
@@ -27,6 +27,7 @@ constexpr uint64_t LEAF_SLOT_OFFSET = 128;
 constexpr uint64_t SLOT_KEY_OFFSET = 0;
 constexpr uint64_t SLOT_SIZE_OFFSET = 8;
 constexpr uint64_t SLOT_OFFSET_OFFSET = 10;
+constexpr uint64_t SLOT_TRX_ID_OFFSET = 12;
 
 constexpr uint64_t BF_KEY_OFFSET = 0;
 constexpr uint64_t BF_PAGENUM_OFFSET = 8;
@@ -67,9 +68,11 @@ public:
     int64_t get_key() const;
     uint16_t get_size() const;
     uint16_t get_offset() const;
+    int get_trx_id() const;
     void set_key(int64_t key);
     void set_size(uint16_t size);
     void set_offset(uint16_t offset);
+    void set_trx_id(int trx_id);
 };
 
 class branch_factor_t{
