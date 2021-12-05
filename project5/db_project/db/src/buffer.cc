@@ -45,13 +45,15 @@ control_block_t* find_victim() {
 // Add a new page to the buffer
 // If the buffer is full, replace the least recently used page
 control_block_t* add_new_page(int64_t table_id, pagenum_t page_number) {
+    
     control_block_t* cur = find_victim();
 
     if (cur->is_dirty) {
         file_write_page(cur->table_id, cur->pagenum, cur->frame);
     }
-    if (cur->table_id >= 0)
+    if (cur->table_id >= 0){
         pagemap.erase(std::make_pair(cur->table_id, cur->pagenum));
+    }
     move_to_beg_of_list(cur);
 
     file_read_page(table_id, page_number, cur->frame);
@@ -59,7 +61,6 @@ control_block_t* add_new_page(int64_t table_id, pagenum_t page_number) {
     cur->table_id = table_id;
     cur->pagenum = page_number;
     cur->is_dirty = 0;
-    pthread_mutex_unlock(&buffer_manager_latch);
     return cur;
 }
 
@@ -109,7 +110,9 @@ control_block_t* buf_read_page(int64_t table_id, pagenum_t page_number) {
     control_block_t* cur = find_buffer(table_id, page_number);
 
     if (cur == nullptr) {
-        return add_new_page(table_id, page_number);
+        cur = add_new_page(table_id, page_number);
+        pthread_mutex_unlock(&buffer_manager_latch);
+        return cur;
     }
 
     move_to_beg_of_list(cur);
@@ -123,8 +126,12 @@ control_block_t* buf_read_page(int64_t table_id, pagenum_t page_number) {
 pagenum_t buf_alloc_page(int64_t table_id) {
     pthread_mutex_lock(&buffer_manager_latch);
     control_block_t* header_ctrl_block = find_buffer(table_id, 0);
-    pthread_mutex_lock(&header_ctrl_block->page_latch);
 
+    if( header_ctrl_block == nullptr ) {
+        header_ctrl_block = add_new_page(table_id, 0);
+    } else {
+        pthread_mutex_lock(&header_ctrl_block->page_latch);
+    }
     pagenum_t pagenum = PageIO::HeaderPage::get_free_pagenum(header_ctrl_block->frame);
     if (pagenum == 0) {
         pagenum_t next_num = PageIO::HeaderPage::get_num_pages(header_ctrl_block->frame);
@@ -191,8 +198,8 @@ int buf_init_db(int num_buf) {
     buffer_ctrl_blocks.resize(num_buf);
 
     for (int i = 0; i < num_buf; i++) {
-        buffer[i] = (page_t*)malloc(sizeof(page_t));
-        buffer_ctrl_blocks[i] = (control_block_t*)malloc(sizeof(control_block_t));
+        buffer[i] = new page_t;
+        buffer_ctrl_blocks[i] = new control_block_t;//(control_block_t*)malloc(sizeof(control_block_t));
 
         if (buffer[i] == nullptr || buffer_ctrl_blocks[i] == nullptr) {
             std::cout << "[FATAL] Memory Allocation Failed at " << __func__ << std::endl;
@@ -222,8 +229,8 @@ int buf_shutdown_db() {
             file_write_page(cur->table_id, cur->pagenum, cur->frame);
         }
         pthread_mutex_destroy(&cur->page_latch);
-        free(cur->frame);
-        free(cur);
+        delete cur->frame;
+        delete cur;
     }
 
     pthread_mutex_destroy(&buffer_manager_latch);
