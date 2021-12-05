@@ -1378,20 +1378,19 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
         }
     } else {
         // TODO: implicit locking
-        ctrl_block = buf_read_page(table_id, leaf);
         int trx_written = slot.get_trx_id();
         
         int res = trx_implicit_to_explicit(table_id, leaf, i, trx_id, trx_written);
 
         if(res){
             // Implicit to Explicit Failed
-            // Create New Explicit Lock
+            // Create New Implicit Lock
+            ctrl_block = buf_read_page(table_id, leaf);
             slot.set_trx_id(trx_id);
             PageIO::BPT::LeafPage::set_nth_slot(ctrl_block->frame, i, slot);
             buf_return_ctrl_block(&ctrl_block, 1);
         } else {
             // Implicit to Explicit Worked
-            buf_return_ctrl_block(&ctrl_block);
             res = acquire_lock(table_id, leaf, i, trx_id, 1);
             if(res < 0){
                 return -1;
