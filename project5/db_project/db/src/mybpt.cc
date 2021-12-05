@@ -102,7 +102,7 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
         
         buf_return_ctrl_block(&ctrl_block);
 
-        lock_t* lock = lock_acquire_compressed(table_id, leaf, i, trx_id);
+        lock_t* lock = nullptr; //lock_acquire_compressed(table_id, leaf, i, trx_id);
         if(lock == nullptr){
             int res = acquire_lock(table_id, leaf, i, trx_id, 0);
             if(res < 0 ) return -1;
