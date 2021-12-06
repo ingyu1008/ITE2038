@@ -15,7 +15,7 @@ bool conflict_exists(hash_table_entry_t* list, lock_t* lock) {
     lock_t* curr = list->head;
     while (curr != nullptr) {
         if (curr == lock) return false;
-        if (curr->trx_id != lock->trx_id && curr->record_id == lock->record_id && (lock->lock_mode | curr->lock_mode) == 1) {
+        if (curr->trx_id != lock->trx_id && (curr->bitmap & lock->bitmap) != 0 && (lock->lock_mode | curr->lock_mode) == 1) {
             #if DEBUG_MODE
             std::cout << "[DEBUG] conflict! " << curr->lock_mode << ", " << lock->lock_mode << ", " << curr->record_id << ", " << curr->trx_id << ", " << lock->trx_id << std::endl;
             #endif
