@@ -85,6 +85,9 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
 	if (list->head == nullptr) {
 		list->head = lock;
 	}
+
+	if(lock_mode == 0) list->slocks[trx_id]++;
+	else list->xlocks[trx_id]++;
 	
 	pthread_mutex_unlock(&lock_table_latch);
 	return lock;
@@ -139,36 +142,41 @@ bool lock_exist(int64_t table_id, int64_t page_id, int64_t key, int trx_id){
 	return false;
 }
 
+void lock_compress(lock_t* lock_obj, int64_t key){
+	pthread_mutex_lock(&lock_table_latch);
+	lock_obj->bitmap |= (1 << key);
+	pthread_mutex_unlock(&lock_table_latch);
+}
+
 lock_t* lock_acquire_compressed(int64_t table_id, pagenum_t page_id, int64_t key, int trx_id) {
 	pthread_mutex_lock(&lock_table_latch);
 
 	std::pair<int64_t, int64_t> p(table_id, page_id);
 	hash_table_entry_t* list = lock_table[p];
 
-	if (list == nullptr) {
+	if (list == nullptr || list->xlocks.size() > 0 || list->slocks[trx_id] == 0) {
 		pthread_mutex_unlock(&lock_table_latch);
 		return nullptr;
 	}
-
-	lock_t* cur = list->head;
-	lock_t* me = nullptr;
-	while (cur != nullptr) {
-		// No X lock holding this key exist in the trx (guarenteed by the caller function)
-		if(cur->lock_mode == LOCK_MODE_EXCLUSIVE){
-			me = nullptr;
-			break;
-		}
-		if (cur->lock_mode == LOCK_MODE_SHARED && cur->trx_id == trx_id) {
-			me = cur;
-		}
-		cur = cur->next;
-	}
-
-	if(me != nullptr){
-		me->bitmap |= (((uint64_t)1) << key);
-	}
-
-
 	pthread_mutex_unlock(&lock_table_latch);
+
+	// there exist no X locks in this list
+
+	lock_t* me = trx_acquire_compressed_lock(table_id,  page_id, key,  trx_id);
+
+	// lock_t* cur = list->head;
+	// lock_t* me = nullptr;
+	// while (cur != nullptr) {
+	// 	// No X lock holding this key exist in the trx (guarenteed by the caller function)
+	// 	if(cur->lock_mode == LOCK_MODE_EXCLUSIVE){
+	// 		me = nullptr;
+	// 		break;
+	// 	}
+	// 	if (cur->lock_mode == LOCK_MODE_SHARED && cur->trx_id == trx_id) {
+	// 		me = cur;
+	// 	}
+	// 	cur = cur->next;
+	// }
+
 	return me;
 }

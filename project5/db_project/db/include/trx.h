@@ -31,6 +31,7 @@ void trx_add_to_locks(int trx_id, lock_t* lock);
 std::optional<std::pair<uint16_t, char*>> trx_find_log(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t trx_id);
 void trx_add_log(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t trx_id, std::pair<uint16_t, char*> log);
 lock_t* trx_get_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t trx_id, int lock_mode);
+lock_t* trx_acquire_compressed_lock(int64_t table_id, pagenum_t page_id, int64_t key, int trx_id);
 lock_t* trx_acquire(uint64_t trx_id, lock_t* lock);
 void trx_abort(uint64_t trx_id);
 trx_entry_t* trx_check_active(int trx_id);
