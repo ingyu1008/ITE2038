@@ -152,9 +152,8 @@ lock_t* lock_acquire_compressed(int64_t table_id, pagenum_t page_id, int64_t key
 
 	lock_t* cur = list->head;
 	while (cur != nullptr) {
+		// No X lock holding this key exist in the trx (guarenteed by the caller function)
 		if(cur->lock_mode == LOCK_MODE_EXCLUSIVE && (cur->bitmap & (((uint64_t)1) << key)) != 0){
-			// If current trx already has X lock of that key, then it should return nullptr, and should invoke acquire_lock().
-			// Else if there exists a conflict, it should invoke acquire_lock() to acquire new lock.
 			pthread_mutex_unlock(&lock_table_latch);
 			return nullptr;
 		}
