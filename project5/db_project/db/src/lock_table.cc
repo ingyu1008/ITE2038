@@ -42,8 +42,8 @@ int init_lock_table() {
 	return 0;
 }
 
-int shutdown_lock_table() { 
-	for(auto it = lock_table.begin(); it != lock_table.end();) {
+int shutdown_lock_table() {
+	for (auto it = lock_table.begin(); it != lock_table.end();) {
 		hash_table_entry_t* list = it->second;
 		// ASSUME THE LIST IS EMPTY
 		delete list;
@@ -86,9 +86,9 @@ lock_t* lock_acquire(int64_t table_id, pagenum_t page_id, int64_t key, int trx_i
 		list->head = lock;
 	}
 
-	if(lock_mode == 0) list->slocks[trx_id]++;
+	if (lock_mode == 0) list->slocks[trx_id]++;
 	else list->xlocks[trx_id]++;
-	
+
 	pthread_mutex_unlock(&lock_table_latch);
 	return lock;
 };
@@ -100,7 +100,7 @@ int lock_release(lock_t* lock_obj) {
 	hash_table_entry_t* list = lock_obj->sentinel;
 
 	wake_up(list, lock_obj);
-	
+
 	if (prev != nullptr) {
 		prev->next = next;
 	}
@@ -114,15 +114,26 @@ int lock_release(lock_t* lock_obj) {
 		list->tail = prev;
 	}
 
+	if (lock_obj->lock_mode == 0) {
+		list->slocks[lock_obj->trx_id]--;
+		if(list->slocks[lock_obj->trx_id] == 0) {
+			list->slocks.erase(lock_obj->trx_id);
+		}
+	} else {
+		list->xlocks[lock_obj->trx_id]--;
+		if(list->xlocks[lock_obj->trx_id] == 0) {
+			list->xlocks.erase(lock_obj->trx_id);
+		}
+	}
 	pthread_cond_destroy(&lock_obj->lock_table_cond);
 
 	delete lock_obj;
-	
+
 	pthread_mutex_unlock(&lock_table_latch);
 	return 0;
 }
 
-bool lock_exist(int64_t table_id, int64_t page_id, int64_t key, int trx_id){
+bool lock_exist(int64_t table_id, int64_t page_id, int64_t key, int trx_id) {
 	pthread_mutex_lock(&lock_table_latch);
 	std::pair<int64_t, int64_t> p(table_id, page_id);
 	hash_table_entry_t* list = lock_table[p];
@@ -142,7 +153,7 @@ bool lock_exist(int64_t table_id, int64_t page_id, int64_t key, int trx_id){
 	return false;
 }
 
-void lock_compress(lock_t* lock_obj, int64_t key){
+void lock_compress(lock_t* lock_obj, int64_t key) {
 	pthread_mutex_lock(&lock_table_latch);
 	lock_obj->bitmap |= (1 << key);
 	pthread_mutex_unlock(&lock_table_latch);
@@ -162,7 +173,7 @@ lock_t* lock_acquire_compressed(int64_t table_id, pagenum_t page_id, int64_t key
 
 	// there exist no X locks in this list
 
-	lock_t* me = trx_acquire_compressed_lock(table_id,  page_id, key,  trx_id);
+	lock_t* me = trx_acquire_compressed_lock(table_id, page_id, key, trx_id);
 
 	// lock_t* cur = list->head;
 	// lock_t* me = nullptr;

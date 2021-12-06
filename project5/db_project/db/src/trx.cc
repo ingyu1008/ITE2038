@@ -193,14 +193,12 @@ int trx_implicit_to_explicit(int64_t table_id, pagenum_t pagenum, int64_t key, i
 lock_t* trx_acquire_compressed_lock(int64_t table_id, pagenum_t page_id, int64_t key, int trx_id){
     pthread_mutex_lock(&trx_table_latch);
     for(int i = 0; i < 63; i++){
-        auto locks = trx_table[trx_id]->locks;
+        auto &locks = trx_table[trx_id]->locks;
         auto it = locks.find({ {table_id, page_id}, {i, 0} });
         if(it != locks.end()){
             lock_t* lock = it->second;
             lock_compress(lock, key);
-            lock->bitmap |= (1 << key);
 
-            locks[{ {table_id, page_id}, {key, 0} }] = lock;
             pthread_mutex_unlock(&trx_table_latch);
             return lock;
         }
