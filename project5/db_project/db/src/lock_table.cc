@@ -152,15 +152,14 @@ lock_t* lock_acquire_compressed(int64_t table_id, pagenum_t page_id, int64_t key
 
 	lock_t* cur = list->head;
 	lock_t* me = nullptr;
-	uint64_t cantbeacquired = 0;
 	while (cur != nullptr) {
 		// No X lock holding this key exist in the trx (guarenteed by the caller function)
 		if(cur->lock_mode == LOCK_MODE_EXCLUSIVE){
-			cantbeacquired |= cur->bitmap;
-		}
-		if (cur->lock_mode == LOCK_MODE_SHARED && cur->trx_id == trx_id && (cur->bitmap & cantbeacquired) == 0) {
-			me = cur;
+			me = nullptr;
 			break;
+		}
+		if (cur->lock_mode == LOCK_MODE_SHARED && cur->trx_id == trx_id) {
+			me = cur;
 		}
 		cur = cur->next;
 	}
