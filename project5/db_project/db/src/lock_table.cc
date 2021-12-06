@@ -151,14 +151,22 @@ lock_t* lock_acquire_compressed(int64_t table_id, pagenum_t page_id, int64_t key
 	}
 
 	lock_t* cur = list->head;
-	lock_t* me = nullptr;
 	while (cur != nullptr) {
-		if(cur->lock_mode == LOCK_MODE_EXCLUSIVE && cur->trx_id != trx_id){
+		if(cur->lock_mode == LOCK_MODE_EXCLUSIVE && (cur->bitmap & (((uint64_t)1) << key)) != 0){
+			// If current trx already has X lock of that key, then it should return nullptr, and should invoke acquire_lock().
+			// Else if there exists a conflict, it should invoke acquire_lock() to acquire new lock.
 			pthread_mutex_unlock(&lock_table_latch);
 			return nullptr;
 		}
+		cur = cur->next;
+	}
+
+	cur = list->head;
+	lock_t* me = nullptr;
+	while (cur != nullptr) {
 		if (cur->lock_mode == LOCK_MODE_SHARED && cur->trx_id == trx_id) {
 			me = cur;
+			break;
 		}
 		cur = cur->next;
 	}
