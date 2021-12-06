@@ -588,3 +588,107 @@ TEST(ConcurrencyCtrl, DeadlockTest) {
 
     EXPECT_EQ(shutdown_db(), 0);
 }
+
+
+void* deadlock_test_mixed(void* arg) {
+    int trx_id = trx_begin();
+    EXPECT_GT(trx_id, 0);
+
+    int table_id = ((int*)arg)[0];
+    int n = N;
+    int err = 0;
+    uint16_t val_size;
+    std::string s[10] = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"};
+    std::vector<std::pair<int,int>> v;
+    for(int i = 1; i <= n; i++){
+        v.push_back({0,i});
+        v.push_back({1,i});
+    }
+
+    std::mt19937 gen(2020011776 + trx_id);
+    std::shuffle(v.begin(), v.end(), gen);
+
+    bool aborted = false;
+
+    for (auto p : v) {
+        int i = p.second;
+        if(p.first == 0){
+            // char ret_val[112] = "\0";
+            std::string data = s[trx_id%10] + "2345678901234567890123456789012345678901234567890" + std::to_string(i);
+            uint16_t *old_val_size = (uint16_t*)malloc(sizeof(uint16_t));
+            int res = db_update(table_id, i, const_cast<char*>(data.c_str()), data.length(), old_val_size, trx_id);
+            free(old_val_size);
+            if(res){
+                std::cout << "[DEBUG] ABORTED" << std::endl;
+                aborted = true;
+                break;
+            }
+        } else {
+            char ret_val[112] = "\0";
+            // std::string data = s[trx_id%10] + "2345678901234567890123456789012345678901234567890" + std::to_string(i);
+            uint16_t *val_size = (uint16_t*)malloc(sizeof(uint16_t));
+            int res = db_find(table_id, i, ret_val, val_size, trx_id);
+            free(val_size);
+            if(res){
+                std::cout << "[DEBUG] ABORTED" << std::endl;
+                aborted = true;
+                break;
+            }
+        }
+    }
+    if(!aborted) trx_commit(trx_id);
+    std::cout << "[DEBUG] Thread " << trx_id << " done" << std::endl;
+    return NULL;
+}
+
+
+TEST(ConcurrencyCtrl, DeadlockTestMixed) {
+    EXPECT_EQ(init_db(BUF_SIZE), 0);
+
+    if (std::remove("deadlockTest.dat") == 0)
+    {
+        std::cout << "[INFO] File 'deadlockTest.dat' already exists. Deleting it." << std::endl;
+    }
+
+    int table_id = open_table("deadlockTest.dat");
+
+    int n = N;
+
+    for (int i = 1; i <= n; i++) {
+        #if DEBUG_MODE
+        std::cout << "[DEBUG] Inserting key = " << i << std::endl;
+        #endif
+        std::string data = "01234567890123456789012345678901234567890123456789" + std::to_string(i);
+        int res = db_insert(table_id, i, const_cast<char*>(data.c_str()), data.length());
+        EXPECT_EQ(res, 0);
+    }
+
+    std::cout << "[INFO] Population done, now testing DeadlockMixed Test" << std::endl;
+    std::cout << "[WARN] This test does not guarentee correctness." << std::endl;
+
+    int m = 10;
+    uint16_t val_size;
+    pthread_t threads[m];
+    std::vector<int*> args;
+    // pthread_attr_t attr;
+    // pthread_attr_setstacksize(&attr, 1024 * 1024 * 1024);
+    for (int i = 0; i < m; i++) {
+        #if DEBUG_MODE
+        std::cout << "[DEBUG] Create thread " << i << std::endl;
+        #endif
+        int *arg = (int*)malloc(sizeof(int));
+        *arg = table_id;
+        args.push_back(arg);
+        pthread_create(&threads[i], NULL, deadlock_test_mixed, arg);
+    }
+
+    for (int i = 0; i < m; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
+    for(auto i:args){
+        free(i);
+    }
+
+    EXPECT_EQ(shutdown_db(), 0);
+}
