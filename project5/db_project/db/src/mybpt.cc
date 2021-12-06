@@ -102,16 +102,8 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
         
         buf_return_ctrl_block(&ctrl_block);
 
-        lock_t* lock = lock_acquire_compressed(table_id, leaf, i, trx_id);
-        if(lock == nullptr){
-            int res = acquire_lock(table_id, leaf, i, trx_id, 0);
-            if(res < 0 ) return -1;
-        } else {
-            #if DEBUG_MODE
-            std::cout << "[DEBUG] acquired compressed lock!" << std::endl;
-            #endif
-            trx_add_to_locks(trx_id, i, lock);
-        }
+        int res = acquire_lock(table_id, leaf, i, trx_id, 0);
+        if(res < 0 ) return -1;
 
         ctrl_block = buf_read_page(table_id, leaf);
     }
@@ -1326,6 +1318,14 @@ int acquire_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int trx_id, i
     lock_t* lock = trx_get_lock(table_id, pagenum, key, trx_id, lock_mode);
 
     if (lock == nullptr) {
+        // Lock compression
+        if(lock_mode == 0){
+            lock = lock_acquire_compressed(table_id, pagenum, key, trx_id);
+            if(lock != nullptr){
+                trx_add_to_locks(trx_id, key, lock);
+                return 0;
+            }
+        }
         lock = lock_acquire(table_id, pagenum, key, trx_id, lock_mode);
         lock = trx_acquire(trx_id, lock);
         if (lock == nullptr)
