@@ -1320,13 +1320,13 @@ int acquire_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int trx_id, i
     if (lock == nullptr) {
         // Lock compression // This does not work correctly
         // TODO: Debug
-        if(lock_mode == 0){
-            lock = lock_acquire_compressed(table_id, pagenum, key, trx_id);
-            if(lock != nullptr){
-                trx_add_to_locks(trx_id, key, lock);
-                return 0;
-            }
-        }
+        // if(lock_mode == 0){
+        //     lock = lock_acquire_compressed(table_id, pagenum, key, trx_id);
+        //     if(lock != nullptr){
+        //         trx_add_to_locks(trx_id, key, lock);
+        //         return 0;
+        //     }
+        // }
         lock = lock_acquire(table_id, pagenum, key, trx_id, lock_mode);
         lock = trx_acquire(trx_id, lock);
         if (lock == nullptr)
