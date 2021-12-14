@@ -1,0 +1,5 @@
+// The configured options and settings for BPT project
+#define Disk_Based_Bpt_VERSION_MAJOR @Bpt_VERSION_MAJOR@
+#define Disk_Based_Bpt_VERSION_MINOR @Bpt_VERSION_MINOR@
+#cmakedefine USE_BPT
+#cmakedefine USE_GOOGLE_TEST
