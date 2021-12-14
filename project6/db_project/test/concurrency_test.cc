@@ -5,18 +5,18 @@
 
 #include <gtest/gtest.h>
 #define BUF_SIZE 200
-#define DEBUG_MODE 0
-#define N 300
+#define DEBUG_MODE 1
+#define N 3000
 
 TEST(ConcurrencyCtrl, SingleThread) {
     EXPECT_EQ(init_db(BUF_SIZE), 0);
 
-    if (std::remove("singleThreaded.dat") == 0)
+    if (std::remove("DATA1") == 0)
     {
-        std::cout << "[INFO] File 'singleThreaded.dat' already exists. Deleting it." << std::endl;
+        std::cout << "[INFO] File 'DATA1' already exists. Deleting it." << std::endl;
     }
 
-    int table_id = open_table("singleThreaded.dat");
+    int table_id = open_table("DATA1");
 
     int n = N;
 
@@ -76,12 +76,12 @@ TEST(ConcurrencyCtrl, SingleThread) {
 TEST(ConcurrencyCtrl, SingleThreadRandom) {
     EXPECT_EQ(init_db(BUF_SIZE), 0);
 
-    if (std::remove("singleThreaded.dat") == 0)
+    if (std::remove("DATA2") == 0)
     {
-        std::cout << "[INFO] File 'singleThreaded.dat' already exists. Deleting it." << std::endl;
+        std::cout << "[INFO] File 'DATA2' already exists. Deleting it." << std::endl;
     }
 
-    int table_id = open_table("singleThreaded.dat");
+    int table_id = open_table("DATA2");
 
     int n = N;
 
@@ -189,13 +189,13 @@ void* slock_only(void* arg) {
 TEST(ConcurrencyCtrl, SLockOnlyTest) {
     EXPECT_EQ(init_db(BUF_SIZE), 0);
 
-    if (std::remove("SLockOnly.dat") == 0)
+    if (std::remove("DATA3") == 0)
     {
-        std::cout << "[INFO] File 'SLockOnly.dat' already exists. Deleting it." << std::endl;
+        std::cout << "[INFO] File 'DATA3' already exists. Deleting it." << std::endl;
     }
 
     int *table_id = (int*)malloc(sizeof(int)); 
-    *table_id = open_table("SLockOnly.dat");
+    *table_id = open_table("DATA3");
 
     int n = N;
 
@@ -262,12 +262,12 @@ void* xlock_only_disjoint(void* arg) {
 TEST(ConcurrencyCtrl, XLockOnlyDisjointTest) {
     EXPECT_EQ(init_db(BUF_SIZE), 0);
 
-    if (std::remove("XLockOnly.dat") == 0)
+    if (std::remove("DATA4") == 0)
     {
-        std::cout << "[INFO] File 'XLockOnly.dat' already exists. Deleting it." << std::endl;
+        std::cout << "[INFO] File 'DATA4' already exists. Deleting it." << std::endl;
     }
 
-    int table_id = open_table("XLockOnly.dat");
+    int table_id = open_table("DATA4");
 
     int n = N;
 
@@ -314,7 +314,7 @@ TEST(ConcurrencyCtrl, XLockOnlyDisjointTest) {
 TEST(ConcurrencyCtrl, XLockOnlyDisjointTestCheck) {
     EXPECT_EQ(init_db(BUF_SIZE), 0);
 
-    int table_id = open_table("XLockOnly.dat");
+    int table_id = open_table("DATA4");
 
     int n = N;
     
@@ -366,12 +366,12 @@ void* xlock_only(void* arg) {
 TEST(ConcurrencyCtrl, XLockOnlyTest) {
     EXPECT_EQ(init_db(BUF_SIZE), 0);
 
-    if (std::remove("XLockOnly.dat") == 0)
+    if (std::remove("DATA5") == 0)
     {
-        std::cout << "[INFO] File 'XLockOnly.dat' already exists. Deleting it." << std::endl;
+        std::cout << "[INFO] File 'DATA5' already exists. Deleting it." << std::endl;
     }
 
-    int table_id = open_table("XLockOnly.dat");
+    int table_id = open_table("DATA5");
 
     int n = N;
 
@@ -416,7 +416,7 @@ TEST(ConcurrencyCtrl, XLockOnlyTest) {
 
 TEST(ConcurrencyCtrl, XLockOnlyTestCheck) {
     EXPECT_EQ(init_db(BUF_SIZE), 0);
-    int table_id = open_table("XLockOnly.dat");
+    int table_id = open_table("DATA5");
 
     int n = N;
     int last_trx = 0;
@@ -436,12 +436,12 @@ TEST(ConcurrencyCtrl, XLockOnlyTestCheck) {
 TEST(ConcurrencyCtrl, MixedLockTest) {
     EXPECT_EQ(init_db(BUF_SIZE), 0);
 
-    if (std::remove("MixedLock.dat") == 0)
+    if (std::remove("DATA6") == 0)
     {
-        std::cout << "[INFO] File 'MixedLock.dat' already exists. Deleting it." << std::endl;
+        std::cout << "[INFO] File 'DATA6' already exists. Deleting it." << std::endl;
     }
 
-    int table_id = open_table("MixedLock.dat");
+    int table_id = open_table("DATA6");
 
     int n = N;
 
@@ -482,7 +482,7 @@ TEST(ConcurrencyCtrl, MixedLockTest) {
 
 TEST(ConcurrencyCtrl, MixedLockTestCheck) {
     EXPECT_EQ(init_db(BUF_SIZE), 0);
-    int table_id = open_table("MixedLock.dat");
+    int table_id = open_table("DATA6");
 
     int n = N;
     int last_trx = 0;
@@ -540,12 +540,12 @@ void* deadlock_test(void* arg) {
 TEST(ConcurrencyCtrl, DeadlockTest) {
     EXPECT_EQ(init_db(BUF_SIZE), 0);
 
-    if (std::remove("deadlockTest.dat") == 0)
+    if (std::remove("DATA7") == 0)
     {
-        std::cout << "[INFO] File 'deadlockTest.dat' already exists. Deleting it." << std::endl;
+        std::cout << "[INFO] File 'DATA7' already exists. Deleting it." << std::endl;
     }
 
-    int table_id = open_table("deadlockTest.dat");
+    int table_id = open_table("DATA7");
 
     int n = N;
 
@@ -645,12 +645,12 @@ void* deadlock_test_mixed(void* arg) {
 TEST(ConcurrencyCtrl, DeadlockTestMixed) {
     EXPECT_EQ(init_db(BUF_SIZE), 0);
 
-    if (std::remove("deadlockTest.dat") == 0)
+    if (std::remove("DATA8") == 0)
     {
-        std::cout << "[INFO] File 'deadlockTest.dat' already exists. Deleting it." << std::endl;
+        std::cout << "[INFO] File 'DATA8' already exists. Deleting it." << std::endl;
     }
 
-    int table_id = open_table("deadlockTest.dat");
+    int table_id = open_table("DATA8");
 
     int n = N;
 

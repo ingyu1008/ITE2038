@@ -5,11 +5,11 @@
 #define LOCK_MODE_EXCLUSIVE 1
 #define LOCK_MODE_SHARED 0
 
-uint64_t trx_id = 1;
+int trx_id = 1;
 
 pthread_mutex_t trx_table_latch;
 
-std::unordered_map<uint64_t, trx_entry_t*> trx_table;
+std::unordered_map<int, trx_entry_t*> trx_table;
 
 bool conflict_exists(hash_table_entry_t* list, lock_t* lock) {
     lock_t* curr = list->head;
@@ -101,7 +101,7 @@ void add_to_trx_list(trx_entry_t *trx, hash_table_entry_t *list, lock_t* lock){
     update_wait_for_graph(list, lock);
 }
 
-std::optional<std::pair<uint16_t, char*>> trx_find_log(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t trx_id) {
+std::optional<std::pair<uint16_t, char*>> trx_find_log(int64_t table_id, pagenum_t pagenum, int64_t key, int trx_id) {
     pthread_mutex_lock(&trx_table_latch);
 
     auto it = trx_table[trx_id]->logs.find({ {table_id, pagenum}, key });
@@ -116,7 +116,7 @@ std::optional<std::pair<uint16_t, char*>> trx_find_log(int64_t table_id, pagenum
     return std::optional<std::pair<uint16_t, char*>>(p);
 }
 
-void trx_add_log(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t trx_id, std::pair<uint16_t, char*> log) {
+void trx_add_log(int64_t table_id, pagenum_t pagenum, int64_t key, int trx_id, std::pair<uint16_t, char*> log) {
     pthread_mutex_lock(&trx_table_latch);
 
     trx_table[trx_id]->logs[{ {table_id, pagenum}, key}] = log;
@@ -124,7 +124,7 @@ void trx_add_log(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t trx_i
     pthread_mutex_unlock(&trx_table_latch);
 }
 
-lock_t* trx_get_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int64_t trx_id, int lock_mode) {
+lock_t* trx_get_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int trx_id, int lock_mode) {
     pthread_mutex_lock(&trx_table_latch);
 
     lock_t* lock = nullptr;
@@ -190,7 +190,8 @@ int trx_implicit_to_explicit(int64_t table_id, pagenum_t pagenum, int64_t key, i
     }
 }
 
-lock_t* trx_acquire(uint64_t trx_id, lock_t* lock) {
+// return 0 if success, 1 for fail and trx has to abort, 2 for anomaly, 3 for sleep
+int trx_acquire(int trx_id, lock_t* lock) {
     pthread_mutex_lock(&trx_table_latch);
 
     auto it = trx_table.find(trx_id);
@@ -198,7 +199,7 @@ lock_t* trx_acquire(uint64_t trx_id, lock_t* lock) {
 
     if (it == trx_table.end()) {
         pthread_mutex_unlock(&trx_table_latch);
-        return nullptr;
+        return 2;
     }
 
     #if DEBUG_MODE
@@ -217,33 +218,38 @@ lock_t* trx_acquire(uint64_t trx_id, lock_t* lock) {
         std::cout << "[DEBUG] deadlock!" << std::endl;
         #endif
         pthread_mutex_unlock(&trx_table_latch);
-        return nullptr;
-}
+        return 1;
+    }
 
-    while (conflict_exists(list, lock)) {
+    if (conflict_exists(list, lock)) {
         #if DEBUG_MODE
         std::cout << "[DEBUG] sleep!" << std::endl;
         #endif
-        pthread_cond_wait(&lock->lock_table_cond, &trx_table_latch);
+        // the latch will be released in trx_sleep
+        return 3;
     }
     pthread_mutex_unlock(&trx_table_latch);
-    return lock;
+    return 0;
 }
 
-void trx_abort(uint64_t trx_id) {
+int trx_abort(int trx_id) {
     pthread_mutex_lock(&trx_table_latch);
     #if DEBUG_MODE
-    std::cout << "[ABORT] Aborted " << trx_id << std::endl;
+    std::cout << "[ABORT] Aborted Start " << trx_id << std::endl;
     #endif
 
     auto it = trx_table.find(trx_id);
     if (it != trx_table.end()) {
         trx_entry_t* trx_entry = it->second;
-
-
+        
+        pthread_mutex_unlock(&trx_table_latch);
+        
         for (auto x : trx_entry->logs) {
             auto key = x.first;
             auto log = x.second;
+            #if DEBUG_MODE
+            std::cout << "[ABORT] undoing page = " << key.first.second << std::endl;
+            #endif
 
             control_block_t* ctrl_block = buf_read_page(key.first.first, key.first.second);
             slot_t slot = PageIO::BPT::LeafPage::get_nth_slot(ctrl_block->frame, key.second);
@@ -251,13 +257,32 @@ void trx_abort(uint64_t trx_id) {
             ctrl_block->frame->set_data(log.second, slot.get_offset(), log.first);
             buf_return_ctrl_block(&ctrl_block, 1);
         }
+        
+        pthread_mutex_lock(&trx_table_latch);
+        
+        #if DEBUG_MODE
+        std::cout << "[ABORT] finished undo, now releasing locks" << std::endl;
+        #endif
 
         release_locks(trx_entry);
+
+        
+        #if DEBUG_MODE
+        std::cout << "[ABORT] DONE" << std::endl;
+        #endif
+
 
         delete trx_entry;
         trx_table.erase(trx_id);
     }
 
+    pthread_mutex_unlock(&trx_table_latch);
+    return 0;
+}
+
+void trx_sleep(int trx_id){
+    lock_t *lock = trx_table[trx_id]->lock;
+    pthread_cond_wait(&lock->lock_table_cond, &trx_table_latch);
     pthread_mutex_unlock(&trx_table_latch);
 }
 

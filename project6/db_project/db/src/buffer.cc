@@ -1,6 +1,8 @@
 #include "buffer.h"
 #define DEBUG_MODE 0
 
+std::unordered_map<int64_t, int64_t> table_id_map;
+
 int buf_size;
 std::vector<control_block_t*> buffer_ctrl_blocks;
 std::vector<page_t*> buffer;
@@ -45,7 +47,6 @@ control_block_t* find_victim() {
 // Add a new page to the buffer
 // If the buffer is full, replace the least recently used page
 control_block_t* add_new_page(int64_t table_id, pagenum_t page_number) {
-    
     control_block_t* cur = find_victim();
 
     if (cur->is_dirty) {
@@ -94,8 +95,9 @@ void buf_return_ctrl_block(control_block_t** ctrl_block, int is_dirty) {
 
 /* Calls file_open_table_file and maps table_id with table index.
  */
-int64_t buf_open_table_file(const char* pathname) {
+int64_t buf_open_table_file(const char* pathname, int64_t tid) {
     int64_t table_id = file_open_table_file(pathname);
+    table_id_map[tid] = table_id;
     if (table_id < 0) return -1;
     return table_id;
 }
@@ -105,6 +107,7 @@ int64_t buf_open_table_file(const char* pathname) {
  * Eviction of victim page can occur if page required is not on the buffer.
  */
 control_block_t* buf_read_page(int64_t table_id, pagenum_t page_number) {
+    table_id = table_id_map[table_id];
     pthread_mutex_lock(&buffer_manager_latch);
 
     control_block_t* cur = find_buffer(table_id, page_number);
@@ -124,6 +127,7 @@ control_block_t* buf_read_page(int64_t table_id, pagenum_t page_number) {
 
 
 pagenum_t buf_alloc_page(int64_t table_id) {
+    table_id = table_id_map[table_id];
     pthread_mutex_lock(&buffer_manager_latch);
     control_block_t* header_ctrl_block = find_buffer(table_id, 0);
 
@@ -161,6 +165,7 @@ pagenum_t buf_alloc_page(int64_t table_id) {
 
 void buf_free_page(int64_t table_id, pagenum_t page_number)
 {
+    table_id = table_id_map[table_id];
     pthread_mutex_lock(&buffer_manager_latch);
     control_block_t* cur = find_buffer(table_id, page_number);
 
@@ -232,6 +237,8 @@ int buf_shutdown_db() {
         delete cur->frame;
         delete cur;
     }
+
+    table_id_map.clear();
 
     pthread_mutex_destroy(&buffer_manager_latch);
 

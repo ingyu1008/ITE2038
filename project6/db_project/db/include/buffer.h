@@ -5,6 +5,9 @@
 #include "page.h"
 #include <vector>
 #include <map>
+#include <unordered_map>
+
+extern std::unordered_map<int64_t, int64_t> table_id_map;
 
 // TODO: Encapsulate This Structure (Probably after finish implementing everything)
 struct control_block_t {
@@ -25,7 +28,7 @@ control_block_t* add_new_page(int64_t table_id, pagenum_t page_number);
 void free_page(int64_t table_id, pagenum_t page_number);
 
 // APIs
-int64_t buf_open_table_file(const char* pathname);
+int64_t buf_open_table_file(const char* pathname, int64_t tid);
 void buf_return_ctrl_block(control_block_t** ctrl_block, int is_dirty = 0);
 control_block_t* buf_read_page(int64_t table_id, pagenum_t page_number);
 pagenum_t buf_alloc_page(int64_t table_id);

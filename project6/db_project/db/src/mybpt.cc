@@ -100,12 +100,15 @@ int find(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* ret_val, u
             trx_implicit_to_explicit(table_id, leaf, i, trx_id, trx_written);
         }
         
-        buf_return_ctrl_block(&ctrl_block);
 
         int res = acquire_lock(table_id, leaf, i, trx_id, 0);
-        if(res < 0 ) return -1;
-
-        ctrl_block = buf_read_page(table_id, leaf);
+        if(res == 1 || res == 2){
+            buf_return_ctrl_block(&ctrl_block);
+            return -1;
+        } else if (res == 3){
+            buf_return_ctrl_block(&ctrl_block);
+            return 2;
+        }
     }
 
     *val_size = slot.get_size();
@@ -1204,6 +1207,8 @@ namespace Util {
     std::set<std::string> opened_tables;
 }
 
+const std::regex TABLE_NAME_REGEX("^DATA[0-9]+$");
+
 int64_t open_table(char* pathname) {
     if (Util::opened_tables.find(std::string(pathname)) != Util::opened_tables.end()) {
         return -1;
@@ -1212,7 +1217,17 @@ int64_t open_table(char* pathname) {
         return -1;
     }
 
-    int64_t table_id = buf_open_table_file(pathname);
+    std::string table_name(pathname);
+    if (!std::regex_match(table_name, TABLE_NAME_REGEX)) {
+        return -1;
+    }
+
+    std::string id = table_name.substr(4, table_name.size() - 1);
+    int64_t table_id = std::stoi(id);
+    
+    std::cout << "[DEBUG] table_id == " << table_id << std::endl;
+
+    buf_open_table_file(pathname, table_id);
 
     if (table_id < 0) return -1;
 
@@ -1328,18 +1343,23 @@ int acquire_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int trx_id, i
         //     }
         // }
         lock = lock_acquire(table_id, pagenum, key, trx_id, lock_mode);
-        lock = trx_acquire(trx_id, lock);
-        if (lock == nullptr)
-            return -1;   
+        int res = trx_acquire(trx_id, lock);
+        return res;  
     }
     return 0;
 }
 
 int db_find(int64_t table_id, int64_t key, char* ret_val, uint16_t* val_size, int trx_id) {
-    control_block_t* header_ctrl_block = buf_read_page(table_id, 0);
-    pagenum_t root_pagenum = PageIO::HeaderPage::get_root_pagenum(header_ctrl_block->frame);
-    buf_return_ctrl_block(&header_ctrl_block);
-    int err = find(table_id, root_pagenum, key, ret_val, val_size, trx_id);
+    int err = 2;
+    while(err == 2){
+        control_block_t* header_ctrl_block = buf_read_page(table_id, 0);
+        pagenum_t root_pagenum = PageIO::HeaderPage::get_root_pagenum(header_ctrl_block->frame);
+        buf_return_ctrl_block(&header_ctrl_block);
+        err = find(table_id, root_pagenum, key, ret_val, val_size, trx_id);
+        if(err == 2){
+            trx_sleep(trx_id);
+        }
+    }
 
     if (err < 0) trx_abort(trx_id);
     return err;
@@ -1372,7 +1392,6 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
             hi = mid - 1;
         }
     }
-    buf_return_ctrl_block(&ctrl_block);
 
     if (i == num_keys) {
         return 1;
@@ -1380,8 +1399,12 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
 
     if(lock_exist(table_id, leaf, i, trx_id)){
         int res = acquire_lock(table_id, leaf, i, trx_id, 1);
-        if(res < 0){
+        if(res == 1 || res == 2){
+            buf_return_ctrl_block(&ctrl_block);
             return -1;
+        } else if (res == 3){
+            buf_return_ctrl_block(&ctrl_block);
+            return 2;
         }
     } else {
         // TODO: implicit locking
@@ -1392,22 +1415,23 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
         if(res){
             // Implicit to Explicit Failed
             // Create New Implicit Lock
-            ctrl_block = buf_read_page(table_id, leaf);
             slot.set_trx_id(trx_id);
             PageIO::BPT::LeafPage::set_nth_slot(ctrl_block->frame, i, slot);
-            buf_return_ctrl_block(&ctrl_block, 1);
         } else {
             // Implicit to Explicit Worked
             res = acquire_lock(table_id, leaf, i, trx_id, 1);
-            if(res < 0){
+            if(res == 1 || res == 2){
+                buf_return_ctrl_block(&ctrl_block);
                 return -1;
+            } else if (res == 3){
+                buf_return_ctrl_block(&ctrl_block);
+                return 2;
             }
         }
     }
 
     auto opt = trx_find_log(table_id, leaf, i, trx_id);
 
-    ctrl_block = buf_read_page(table_id, leaf);
     *old_val_size = slot.get_size();
 
     if(!opt.has_value()) {
@@ -1415,10 +1439,8 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
         log.first = *old_val_size;
         log.second = (char*)malloc(log.first);
         ctrl_block->frame->get_data(log.second, slot.get_offset(), *old_val_size);
-        buf_return_ctrl_block(&ctrl_block);
 
         trx_add_log(table_id, leaf, i, trx_id, log);
-        ctrl_block = buf_read_page(table_id, leaf);
     }
 
     ctrl_block->frame->set_data(value, slot.get_offset(), val_size);
@@ -1428,11 +1450,16 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
 }
 
 int db_update(int64_t table_id, int64_t key, char* value, uint16_t val_size, uint16_t* old_val_size, int trx_id) {
-    control_block_t* header_ctrl_block = buf_read_page(table_id, 0);
-
-    pagenum_t root_pagenum = PageIO::HeaderPage::get_root_pagenum(header_ctrl_block->frame);
-    buf_return_ctrl_block(&header_ctrl_block);
-    int err = update(table_id, root_pagenum, key, value, val_size, old_val_size, trx_id);
+    int err = 2;
+    while(err == 2){
+        control_block_t* header_ctrl_block = buf_read_page(table_id, 0);
+        pagenum_t root_pagenum = PageIO::HeaderPage::get_root_pagenum(header_ctrl_block->frame);
+        buf_return_ctrl_block(&header_ctrl_block);
+        err = update(table_id, root_pagenum, key, value, val_size, old_val_size, trx_id);
+        if(err == 2){
+            trx_sleep(trx_id);
+        }
+    }
 
     if (err < 0) trx_abort(trx_id);
     return err;

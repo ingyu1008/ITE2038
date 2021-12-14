@@ -6,7 +6,7 @@
 #include <gtest/gtest.h>
 #define BUF_SIZE 200
 #define DEBUG_MODE 0
-#define N 10000
+#define N 3000
 
 TEST(ConcurrencyCtrl, SingleThread) {
     EXPECT_EQ(init_db(BUF_SIZE), 0);
@@ -666,7 +666,7 @@ TEST(ConcurrencyCtrl, DeadlockTestMixed) {
     std::cout << "[INFO] Population done, now testing DeadlockMixed Test" << std::endl;
     std::cout << "[WARN] This test does not guarentee correctness." << std::endl;
 
-    int m = 10;
+    int m = 100;
     uint16_t val_size;
     pthread_t threads[m];
     std::vector<int*> args;

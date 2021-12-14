@@ -4,6 +4,7 @@
 #include "page.h"
 #include "file.h"
 #include "buffer.h"
+#include <regex>
 #include <set>
 
 
@@ -51,6 +52,7 @@ int db_insert(int64_t table_id, int64_t key, char* value, uint16_t val_size);
 int db_find(int64_t table_id, int64_t key, char* ret_val, uint16_t* val_size);
 int db_delete(int64_t table_id, int64_t key);
 int init_db(int num_buf);
+int init_db(int num_buf, int flag, int log_num, char* log_path, char* logmsg_path);
 int shutdown_db();
 
 void db_print_tree(int64_t table_id);
