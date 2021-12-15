@@ -324,7 +324,7 @@ void recover_main(char* logmsg_path, int flag, int log_num) {
 
     if(flag == 1){
         log_flush();
-        return 0;
+        return;
     }
 
     // Undo Pass
