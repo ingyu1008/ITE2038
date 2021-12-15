@@ -322,6 +322,11 @@ void recover_main(char* logmsg_path, int flag, int log_num) {
     fprintf(logmsg_file, "[REDO] Redo pass end\n");
     // Redo Pass Done
 
+    if(flag == 1){
+        log_flush();
+        return 0;
+    }
+
     // Undo Pass
     fprintf(logmsg_file, "[UNDO] Undo pass start\n");
 
