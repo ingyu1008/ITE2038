@@ -210,7 +210,7 @@ int shutdown_recovery() {
 }
 
 
-void recover_main(char* logmsg_path) {
+void recover_main(char* logmsg_path, int flag, int log_num) {
     FILE* logmsg_file = fopen(logmsg_path, "w");
     rewind(log_file);
     // Analysis Pass
@@ -254,7 +254,9 @@ void recover_main(char* logmsg_path) {
     fprintf(logmsg_file, "[REDO] Redo pass start\n");
 
     rewind(log_file);
-    while (true) {
+    int redo = 0;
+    while (flag != 1 || redo < log_num) {
+        redo++;
         int sz;
         if (fread(&sz, sizeof(int), 1, log_file) != 1) break;
         log_entry_t* log = new log_entry_t(sz);
@@ -323,7 +325,9 @@ void recover_main(char* logmsg_path) {
     // Undo Pass
     fprintf(logmsg_file, "[UNDO] Undo pass start\n");
 
-    while (losers.size() > 0) {
+    int undo = 0;
+    while (losers.size() > 0 && (flag != 2 || undo < log_num)) {
+        undo++;
         int next_trx;
         uint64_t next_entry = 0;
         for (auto& x : losers) {
