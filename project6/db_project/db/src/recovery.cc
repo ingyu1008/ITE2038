@@ -185,8 +185,8 @@ uint64_t add_to_log_buffer(log_entry_t* log) {
 
 void log_write(log_entry_t* log) {
     int sz = log->get_log_size();
-    for(int i = 0; i < sz; i++) {
-        fprintf(log_file, "%c", log->data[i]);    
+    for (int i = 0; i < sz; i++) {
+        fprintf(log_file, "%c", log->data[i]);
     }
     // fwrite(const_cast<char*>(log->data), 1, log->get_log_size(), log_file);
 }
@@ -261,7 +261,7 @@ void recover_main(char* logmsg_path, int flag, int log_num) {
         if (fread(&sz, sizeof(int), 1, log_file) != 1) break;
         log_entry_t* log = new log_entry_t(sz);
         fseek(log_file, -sizeof(int), SEEK_CUR);
-        fread(log->data,1, sz, log_file);
+        fread(log->data, 1, sz, log_file);
 
 
         // if (log->get_type() == LOG_BEGIN) {
@@ -278,7 +278,7 @@ void recover_main(char* logmsg_path, int flag, int log_num) {
 
 
         if (log->get_type() == LOG_UPDATE || log->get_type() == LOG_COMPENSATE) {
-            if(log->get_type() == LOG_COMPENSATE){
+            if (log->get_type() == LOG_COMPENSATE) {
                 fprintf(logmsg_file, "LSN %lu [CLR] Transaction id %d\n", log->get_lsn(), log->get_trx_id());
             }
             int64_t table_id = log->get_table_id();
@@ -342,19 +342,18 @@ void recover_main(char* logmsg_path, int flag, int log_num) {
         fread(&sz, sizeof(int), 1, log_file);
         log_entry_t* log = new log_entry_t(sz);
         fseek(log_file, -sizeof(int), SEEK_CUR);
-        fread(log->data,  1,  sz,log_file);
+        fread(log->data, 1, sz, log_file);
+        
+        if(log->get_type() == LOG_COMPENSATE){
+            fprintf(logmsg_file, "LSN %lu [CLR] Transaction id %d\n", log->get_lsn(), log->get_trx_id());
+            losers[log->get_trx_id()] = log->get_next_undo_lsn();
+        }
 
-
-        if (log->get_type() == LOG_UPDATE || log->get_type() == LOG_COMPENSATE) {
-
-            if (log->get_type() == LOG_COMPENSATE) {
-                fprintf(logmsg_file, "LSN %lu [CLR] Transaction id %d\n", log->get_lsn(), log->get_trx_id());
-            }
+        if (log->get_type() == LOG_UPDATE) {
             control_block_t* ctrl_block = buf_read_page(log->get_table_id(), log->get_pagenum());
             if (PageIO::BPT::get_page_lsn(ctrl_block->frame) >= log->get_lsn()) {
-                if (log->get_type() == LOG_UPDATE) {
-                    fprintf(logmsg_file, "LSN %lu [UPDATE] Transaction id %d undo apply\n", log->get_lsn(), log->get_trx_id());
-                }
+                fprintf(logmsg_file, "LSN %lu [UPDATE] Transaction id %d undo apply\n", log->get_lsn(), log->get_trx_id());
+                
                 int length = log->get_length();
                 char* old = new char[length];
                 log->get_old_image(old);
