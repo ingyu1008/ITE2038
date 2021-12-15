@@ -1,4 +1,5 @@
 #include "trx.h"
+#include "recovery.h"
 #include "buffer.h"
 #define DEBUG_MODE 0
 
@@ -276,6 +277,10 @@ int trx_abort(int trx_id) {
         trx_table.erase(trx_id);
     }
 
+    log_entry_t *log = create_rollback_log(trx_id);
+    add_to_log_buffer(log);
+    log_flush();
+
     pthread_mutex_unlock(&trx_table_latch);
     return 0;
 }
@@ -298,6 +303,10 @@ int trx_shutdown() {
 
 int trx_begin(void) {
     pthread_mutex_lock(&trx_table_latch);
+    
+    log_entry_t *log = create_begin_log(trx_id);
+    add_to_log_buffer(log);
+
     #if DEBUG_MODE
     std::cout << "[DEBUG] trx_begin trx_id = " << trx_id << std::endl;
     #endif
@@ -319,6 +328,11 @@ int trx_commit(int trx_id) {
     #if DEBUG_MODE
     std::cout << "[DEBUG] trx_commit trx_id = " << trx_id << std::endl;
     #endif
+
+    log_entry_t *log = create_commit_log(trx_id);
+    add_to_log_buffer(log);
+    log_flush();
+
     auto it = trx_table.find(trx_id);
     if (it != trx_table.end()) {
         trx_entry_t* trx_entry = it->second;

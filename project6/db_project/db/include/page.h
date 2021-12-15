@@ -35,6 +35,7 @@ constexpr uint64_t BF_PAGENUM_OFFSET = 8;
 constexpr uint64_t PH_PARENT_PAGENUM_OFFSET = 0;
 constexpr uint64_t PH_IS_LEAF_OFFSET = 8;
 constexpr uint64_t PH_NUM_KEYS_OFFSET = 12;
+constexpr uint64_t PH_PAGE_LSN_OFFSET = 24;
 constexpr uint64_t PH_SIZE = 128;
 
 constexpr uint64_t INTERNAL_LFT_PAGENUM_OFFSET = 120;
@@ -103,9 +104,11 @@ namespace PageIO {
         pagenum_t get_parent_pagenum(page_t* page);
         int get_is_leaf(page_t* page);
         int get_num_keys(page_t* page);
+        uint64_t get_page_lsn(page_t* page);
         void set_parent_pagenum(page_t* page, pagenum_t parent_pagenum);
         void set_is_leaf(page_t* page, int is_leaf);
         void set_num_keys(page_t* page, int num_keys);
+        void set_page_lsn(page_t* page, uint64_t page_lsn);
 
         namespace InternalPage {
             pagenum_t get_leftmost_pagenum(page_t* page);

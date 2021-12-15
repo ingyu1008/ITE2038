@@ -52,7 +52,6 @@ int db_insert(int64_t table_id, int64_t key, char* value, uint16_t val_size);
 int db_find(int64_t table_id, int64_t key, char* ret_val, uint16_t* val_size);
 int db_delete(int64_t table_id, int64_t key);
 int init_db(int num_buf);
-int init_db(int num_buf, int flag, int log_num, char* log_path, char* logmsg_path);
 int shutdown_db();
 
 void db_print_tree(int64_t table_id);
@@ -65,5 +64,10 @@ int acquire_lock(int64_t table_id, pagenum_t pagenum, int64_t key, int trx_id, i
 int db_find(int64_t table_id, int64_t key, char* ret_val, uint16_t* val_size, int trx_id);
 int db_update(int64_t table_id, int64_t key, char* value, uint16_t val_size, uint16_t* old_val_size, int trx_id);
 
+// Newly Added API from Project 6
+int init_db(int num_buf, int flag, int log_num, char* log_path, char* logmsg_path);
+void analysis();
+void redo();
+void undo();
 
 #endif // __MYBPT_H__

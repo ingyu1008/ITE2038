@@ -3,14 +3,22 @@
 
 #include "page.h"
 #include <cstdio>
+#include <vector>
+#include <set>
+
+#define LOG_BEGIN 0
+#define LOG_UPDATE 1
+#define LOG_COMMIT 2
+#define LOG_ROLLBACK 3
+#define LOG_COMPENSATE 4
+#define LOG_BUFFER_SIZE 64
 
 constexpr int LOG_ENTRY_SIZE = 28;
 constexpr int LOG_ENTRY_EXT_SIZE = 48;
 
 class log_entry_t{
-private:
-    char *data;
 public:
+    char *data;
     log_entry_t();
     log_entry_t(int data_length, int compensate);
     log_entry_t(int size);
@@ -44,5 +52,19 @@ public:
     void set_new_image(const char *src);
     void set_next_undo_lsn(uint64_t next_undo_lsn);
 };
+
+log_entry_t* create_begin_log(int trx_id);
+log_entry_t* create_update_log(int trx_id, int64_t table_id, pagenum_t pagenum, uint16_t offset, uint16_t length, const char *old, const char *new_);
+log_entry_t* create_commit_log(int trx_id);
+log_entry_t* create_rollback_log(int trx_id);
+log_entry_t* create_coompensate_log(int trx_id, int64_t table_id, pagenum_t pagenum, uint16_t offset, uint16_t length, const char *old, const char *new_, uint64_t next_undo_lsn);
+
+void add_to_log_buffer(log_entry_t *log);
+void log_write(log_entry_t *log);
+void log_flush();
+int init_recovery(char * log_path);
+int shutdown_recovery();
+
+void recover_main(char* logmsg_path);
 
 #endif // __RECOVERY_H__

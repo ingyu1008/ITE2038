@@ -3,6 +3,7 @@
 #include "buffer.h"
 #include "lock_table.h"
 #include "trx.h"
+#include "recovery.h"
 #define DEBUG_MODE 0
 
 // Find Operations
@@ -1430,6 +1431,7 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
         }
     }
 
+    
     auto opt = trx_find_log(table_id, leaf, i, trx_id);
 
     *old_val_size = slot.get_size();
@@ -1439,6 +1441,10 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
         log.first = *old_val_size;
         log.second = (char*)malloc(log.first);
         ctrl_block->frame->get_data(log.second, slot.get_offset(), *old_val_size);
+        
+        // New Logging System
+        log_entry_t* log_ = create_update_log(trx_id, table_id, leaf, slot.get_offset(), slot.get_size(), const_cast<const char*>(log.second), const_cast<const char*>(value));
+        add_to_log_buffer(log_);
 
         trx_add_log(table_id, leaf, i, trx_id, log);
     }
@@ -1463,4 +1469,17 @@ int db_update(int64_t table_id, int64_t key, char* value, uint16_t val_size, uin
 
     if (err < 0) trx_abort(trx_id);
     return err;
+}
+
+/*****************************************************************************
+ *                                                                           *
+ *  Newly Implemented in Project 6                                           *
+ *                                                                           *
+ *****************************************************************************/
+
+int init_db(int num_buf, int flag, int log_num, char* log_path, char* logmsg_path){
+    int res = init_db(num_buf); // DBMS initialization
+    init_recovery(log_path);
+    recover_main(logmsg_path);
+    return res;
 }

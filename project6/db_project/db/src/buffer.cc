@@ -1,4 +1,5 @@
 #include "buffer.h"
+#include "recovery.h"
 #define DEBUG_MODE 0
 
 std::unordered_map<int64_t, int64_t> table_id_map;
@@ -50,6 +51,7 @@ control_block_t* add_new_page(int64_t table_id, pagenum_t page_number) {
     control_block_t* cur = find_victim();
 
     if (cur->is_dirty) {
+        log_flush();
         file_write_page(cur->table_id, cur->pagenum, cur->frame);
     }
     if (cur->table_id >= 0){

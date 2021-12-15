@@ -113,6 +113,9 @@ int PageIO::BPT::get_is_leaf(page_t* page) {
 int PageIO::BPT::get_num_keys(page_t* page) {
     return page->get_data<int>(PH_NUM_KEYS_OFFSET);
 }
+uint64_t PageIO::BPT::get_page_lsn(page_t* page) {
+    return page->get_data<uint64_t>(PH_PAGE_LSN_OFFSET);
+}
 void PageIO::BPT::set_parent_pagenum(page_t* page, pagenum_t parent_pagenum) {
     page->set_data(parent_pagenum, PH_PARENT_PAGENUM_OFFSET);
 }
@@ -121,6 +124,9 @@ void PageIO::BPT::set_is_leaf(page_t* page, int is_leaf) {
 }
 void PageIO::BPT::set_num_keys(page_t* page, int num_keys) {
     page->set_data(num_keys, PH_NUM_KEYS_OFFSET);
+}
+void PageIO::BPT::set_page_lsn(page_t* page, uint64_t page_lsn) {
+    page->set_data(page_lsn, PH_PAGE_LSN_OFFSET);
 }
 
 pagenum_t PageIO::BPT::InternalPage::get_leftmost_pagenum(page_t* page) {
