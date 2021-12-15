@@ -272,14 +272,14 @@ int trx_abort(int trx_id) {
         std::cout << "[ABORT] DONE" << std::endl;
         #endif
 
+        log_entry_t *log = create_rollback_log(trx_id);
+        add_to_log_buffer(log);
+        log_flush();
 
         delete trx_entry;
         trx_table.erase(trx_id);
     }
 
-    log_entry_t *log = create_rollback_log(trx_id);
-    add_to_log_buffer(log);
-    log_flush();
 
     pthread_mutex_unlock(&trx_table_latch);
     return 0;
