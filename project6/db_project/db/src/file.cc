@@ -115,7 +115,6 @@ void file_read_page(int64_t table_id, pagenum_t page_number, char* dest)
 void file_write_page(int64_t table_id, pagenum_t page_number, const char* src)
 {
     FileIO::write(table_id, src, PAGE_SIZE, page_number * PAGE_SIZE);
-    
     sync();
 }
 

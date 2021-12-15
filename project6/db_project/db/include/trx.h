@@ -16,6 +16,7 @@ struct trx_entry_t{
     std::set<uint64_t> wait_for;
     std::map<std::pair<std::pair<int64_t, pagenum_t>, std::pair<int64_t, int>>, lock_t*> locks;
     std::map<std::pair<std::pair<int64_t, pagenum_t>, int64_t>, std::pair<uint16_t, char*>> logs;
+    uint64_t last_lsn;
 };
 
 // Helper Functions
@@ -41,6 +42,8 @@ int trx_init();
 int trx_shutdown();
 int trx_begin(void);
 int trx_commit(int trx_id);
+void trx_resurrect(int trx_id, uint64_t lsn);
+void trx_remove(int trx_id);
 
 extern std::unordered_map<int, trx_entry_t*> trx_table;
 extern pthread_mutex_t trx_table_latch;

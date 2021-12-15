@@ -1211,13 +1211,6 @@ namespace Util {
 const std::regex TABLE_NAME_REGEX("^DATA[0-9]+$");
 
 int64_t open_table(char* pathname) {
-    if (Util::opened_tables.find(std::string(pathname)) != Util::opened_tables.end()) {
-        return -1;
-    }
-    if (Util::opened_tables.size() == 19) { // Total number of tables is less than 20
-        return -1;
-    }
-
     std::string table_name(pathname);
     if (!std::regex_match(table_name, TABLE_NAME_REGEX)) {
         return -1;
@@ -1225,6 +1218,14 @@ int64_t open_table(char* pathname) {
 
     std::string id = table_name.substr(4, table_name.size() - 1);
     int64_t table_id = std::stoi(id);
+
+    if (Util::opened_tables.find(std::string(pathname)) != Util::opened_tables.end()) {
+        return table_id;
+    }
+    if (Util::opened_tables.size() == 19) { // Total number of tables is less than 20
+        return -1;
+    }
+
     
     std::cout << "[DEBUG] table_id == " << table_id << std::endl;
 
@@ -1436,19 +1437,20 @@ int update(int64_t table_id, pagenum_t root_pagenum, int64_t key, char* value, u
 
     *old_val_size = slot.get_size();
 
-    if(!opt.has_value()) {
-        std::pair<uint16_t, char*> log;
-        log.first = *old_val_size;
-        log.second = (char*)malloc(log.first);
-        ctrl_block->frame->get_data(log.second, slot.get_offset(), *old_val_size);
-        
-        // New Logging System
-        log_entry_t* log_ = create_update_log(trx_id, table_id, leaf, slot.get_offset(), slot.get_size(), const_cast<const char*>(log.second), const_cast<const char*>(value));
-        add_to_log_buffer(log_);
+    std::pair<uint16_t, char*> log;
+    log.first = *old_val_size;
+    log.second = (char*)malloc(log.first);
+    ctrl_block->frame->get_data(log.second, slot.get_offset(), *old_val_size);
 
+    // New Logging System
+    log_entry_t* log_ = create_update_log(trx_id, table_id, leaf, slot.get_offset(), slot.get_size(), const_cast<const char*>(log.second), const_cast<const char*>(value));
+    uint64_t lsn = add_to_log_buffer(log_);
+
+    if(!opt.has_value()) {
         trx_add_log(table_id, leaf, i, trx_id, log);
     }
 
+    PageIO::BPT::set_page_lsn(ctrl_block->frame, lsn);
     ctrl_block->frame->set_data(value, slot.get_offset(), val_size);
 
     buf_return_ctrl_block(&ctrl_block, 1);

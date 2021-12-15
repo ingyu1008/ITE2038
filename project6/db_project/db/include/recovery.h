@@ -57,9 +57,9 @@ log_entry_t* create_begin_log(int trx_id);
 log_entry_t* create_update_log(int trx_id, int64_t table_id, pagenum_t pagenum, uint16_t offset, uint16_t length, const char *old, const char *new_);
 log_entry_t* create_commit_log(int trx_id);
 log_entry_t* create_rollback_log(int trx_id);
-log_entry_t* create_coompensate_log(int trx_id, int64_t table_id, pagenum_t pagenum, uint16_t offset, uint16_t length, const char *old, const char *new_, uint64_t next_undo_lsn);
+log_entry_t* create_compensate_log(int trx_id, int64_t table_id, pagenum_t pagenum, uint16_t offset, uint16_t length, const char *old, const char *new_, uint64_t next_undo_lsn);
 
-void add_to_log_buffer(log_entry_t *log);
+uint64_t add_to_log_buffer(log_entry_t *log);
 void log_write(log_entry_t *log);
 void log_flush();
 int init_recovery(char * log_path);

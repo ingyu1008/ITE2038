@@ -303,9 +303,6 @@ int trx_shutdown() {
 
 int trx_begin(void) {
     pthread_mutex_lock(&trx_table_latch);
-    
-    log_entry_t *log = create_begin_log(trx_id);
-    add_to_log_buffer(log);
 
     #if DEBUG_MODE
     std::cout << "[DEBUG] trx_begin trx_id = " << trx_id << std::endl;
@@ -315,12 +312,29 @@ int trx_begin(void) {
         trx_entry->trx_id = trx_id++;
         trx_entry->lock = nullptr;
         trx_table[trx_entry->trx_id] = trx_entry;
+        log_entry_t *log = create_begin_log(trx_entry->trx_id);
+        uint64_t lsn = add_to_log_buffer(log);
         pthread_mutex_unlock(&trx_table_latch);
         return trx_entry->trx_id;
     }
 
     pthread_mutex_unlock(&trx_table_latch);
     return 0;
+}
+void trx_resurrect(int trx_id, uint64_t lsn){
+    pthread_mutex_lock(&trx_table_latch);
+    trx_entry_t* trx_entry = new trx_entry_t();
+    trx_entry->trx_id = trx_id++;
+    trx_entry->lock = nullptr;
+    trx_entry->last_lsn = lsn;
+    trx_table[trx_entry->trx_id] = trx_entry;
+    pthread_mutex_unlock(&trx_table_latch);
+}
+
+void trx_remove(int trx_id){
+    pthread_mutex_lock(&trx_table_latch);
+    trx_table.erase(trx_id);
+    pthread_mutex_unlock(&trx_table_latch);
 }
 
 int trx_commit(int trx_id) {

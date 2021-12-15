@@ -246,10 +246,6 @@ int buf_shutdown_db() {
 
     file_close_database_file();
 
-    #if DEBUG_MODE
-    std::cout << "[DEBUG] Total pin count on shutdown_db() = " << total << std::endl;
-    std::cout << "[DEBUG] " << cache_hit << " hits out of " << tot_read << " read operations." << std::endl;
-    #endif
     return 0;
 }
 
