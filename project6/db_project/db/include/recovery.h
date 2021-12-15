@@ -65,6 +65,6 @@ void log_flush();
 int init_recovery(char * log_path);
 int shutdown_recovery();
 
-void recover_main(char* logmsg_path, int flag, int log_num)
+void recover_main(char* logmsg_path, int flag, int log_num);
 
 #endif // __RECOVERY_H__
