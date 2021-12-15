@@ -7,6 +7,7 @@ set(DB_SOURCES
   ${DB_SOURCE_DIR}/buffer.cc
   ${DB_SOURCE_DIR}/lock_table.cc
   ${DB_SOURCE_DIR}/trx.cc
+  ${DB_SOURCE_DIR}/recovery.cc
   
   # Add your sources here
   # ${DB_SOURCE_DIR}/foo/bar/your_source.cc
@@ -21,6 +22,7 @@ set(DB_HEADERS
   ${DB_HEADER_DIR}/buffer.h
   ${DB_HEADER_DIR}/lock_table.h
   ${DB_HEADER_DIR}/trx.h
+  ${DB_HEADER_DIR}/recovery.h
   
   
   # Add your headers here
