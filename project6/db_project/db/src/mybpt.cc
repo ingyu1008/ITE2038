@@ -1212,11 +1212,11 @@ const std::regex TABLE_NAME_REGEX("^DATA[0-9]+$");
 
 int64_t open_table(char* pathname) {
     std::string table_name(pathname);
-    if (!std::regex_match(table_name, TABLE_NAME_REGEX)) {
-        return -1;
-    }
+    // if (!std::regex_match(table_name, TABLE_NAME_REGEX)) {
+    //     return -1;
+    // }
 
-    std::string id = table_name.substr(4, table_name.size() - 1);
+    std::string id = table_name.substr(4);
     int64_t table_id = std::stoi(id);
 
     if (Util::opened_tables.find(std::string(pathname)) != Util::opened_tables.end()) {
