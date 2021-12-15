@@ -255,6 +255,13 @@ int trx_abort(int trx_id) {
             control_block_t* ctrl_block = buf_read_page(key.first.first, key.first.second);
             slot_t slot = PageIO::BPT::LeafPage::get_nth_slot(ctrl_block->frame, key.second);
 
+            char * original_value = new char[slot.get_size()];
+            ctrl_block->frame->get_data(original_value, slot.get_offset(), slot.get_size());
+
+            log_entry_t* log_ = create_update_log(trx_id, key.first.first, key.first.second, slot.get_offset(), slot.get_size(), const_cast<const char*>(original_value), const_cast<const char*>(log.second));
+            uint64_t lsn = add_to_log_buffer(log_);
+
+            PageIO::BPT::set_page_lsn(ctrl_block->frame, lsn);
             ctrl_block->frame->set_data(log.second, slot.get_offset(), log.first);
             buf_return_ctrl_block(&ctrl_block, 1);
         }

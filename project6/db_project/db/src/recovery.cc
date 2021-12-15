@@ -184,7 +184,11 @@ uint64_t add_to_log_buffer(log_entry_t* log) {
 }
 
 void log_write(log_entry_t* log) {
-    fwrite(log->data, log->get_log_size(), 1, log_file);
+    int sz = log->get_log_size();
+    for(int i = 0; i < sz; i++) {
+        fprintf(log_file, "%c", log->data[i]);    
+    }
+    // fwrite(const_cast<char*>(log->data), 1, log->get_log_size(), log_file);
 }
 
 void log_flush() {
@@ -213,14 +217,13 @@ void recover_main(char* logmsg_path) {
     std::set<int> winners, opened_tables;
     std::map<int, uint64_t> losers;
 
-    std::cout << "[ANALYSIS] Analysis pass start" << std::endl;
     fprintf(logmsg_file, "[ANALYSIS] Analysis pass start\n");
     while (true) {
         int sz;
         if (fread(&sz, sizeof(int), 1, log_file) != 1) break;
         log_entry_t* log = new log_entry_t(sz);
         fseek(log_file, -sizeof(int), SEEK_CUR);
-        fread(log->data, sz, 1, log_file);
+        fread(log->data, 1, sz, log_file);
         losers[log->get_trx_id()] = log->get_lsn();
         if (log->get_type() == LOG_COMMIT || log->get_type() == LOG_ROLLBACK) {
             winners.insert(log->get_trx_id());
@@ -230,7 +233,6 @@ void recover_main(char* logmsg_path) {
 
         delete log;
     }
-    std::cout << "[ANALYSIS] Analysis pass end" << std::endl;
     fprintf(logmsg_file, "[ANALYSIS] Analysis success. Winner: ");
     for (auto it = winners.begin();it != winners.end();) {
         fprintf(logmsg_file, "%d", *it);
@@ -257,7 +259,7 @@ void recover_main(char* logmsg_path) {
         if (fread(&sz, sizeof(int), 1, log_file) != 1) break;
         log_entry_t* log = new log_entry_t(sz);
         fseek(log_file, -sizeof(int), SEEK_CUR);
-        fread(log->data, sz, 1, log_file);
+        fread(log->data,1, sz, log_file);
 
 
         // if (log->get_type() == LOG_BEGIN) {
@@ -272,7 +274,6 @@ void recover_main(char* logmsg_path) {
         //     fprintf(logmsg_file, "LSN %llu [UNKNOWN]\n", log->get_lsn());
         // }
 
-        std::cout << log->get_lsn() << std::endl;
 
         if (log->get_type() == LOG_UPDATE || log->get_type() == LOG_COMPENSATE) {
             if(log->get_type() == LOG_COMPENSATE){
@@ -332,15 +333,13 @@ void recover_main(char* logmsg_path) {
             }
             if (trx_table.find(x.first) == trx_table.end()) trx_resurrect(x.first, x.second);
         }
-        std::cout << next_trx << " " << next_entry << std::endl;
         fseek(log_file, next_entry, SEEK_SET);
         int sz;
         fread(&sz, sizeof(int), 1, log_file);
         log_entry_t* log = new log_entry_t(sz);
         fseek(log_file, -sizeof(int), SEEK_CUR);
-        fread(log->data, sz, 1, log_file);
+        fread(log->data,  1,  sz,log_file);
 
-        std::cout << log->get_lsn() << std::endl;
 
         if (log->get_type() == LOG_UPDATE || log->get_type() == LOG_COMPENSATE) {
 
@@ -395,5 +394,4 @@ void recover_main(char* logmsg_path) {
 
     fflush(logmsg_file);
 
-    std::cout << "[RECOVER] recovery done" << std::endl;
 }
