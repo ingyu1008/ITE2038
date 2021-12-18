@@ -225,6 +225,7 @@ void recover_main(char* logmsg_path, int flag, int log_num) {
         fseek(log_file, -sizeof(int), SEEK_CUR);
         fread(log->data, 1, sz, log_file);
         losers[log->get_trx_id()] = log->get_lsn();
+        trx_id = std::max(trx_id, log->get_trx_id()+1);
         if (log->get_type() == LOG_COMMIT || log->get_type() == LOG_ROLLBACK) {
             winners.insert(log->get_trx_id());
             losers.erase(log->get_trx_id());

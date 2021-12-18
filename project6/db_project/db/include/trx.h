@@ -47,5 +47,6 @@ void trx_remove(int trx_id);
 
 extern std::unordered_map<int, trx_entry_t*> trx_table;
 extern pthread_mutex_t trx_table_latch;
+extern int trx_id;
 
 #endif //__TRX_H__
