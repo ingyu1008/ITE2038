@@ -1,5 +1,6 @@
 # 데이터베이스시스템및응용
----  
+[Wiki](https://github.com/ingyu1008/ITE2038/wiki)
+---
 ## Info  
 - 방인규, 2020011776  
 - 이메일 : ingyu1008@hanyang.ac.kr  
