@@ -2,6 +2,8 @@
 
 한양대학교 데이터베이스시스템및응용(ITE2038)
 
+Grade: A+
+
 ## [Wiki](https://github.com/ingyu1008/ITE2038/wiki)
 
 [Project 2 On-Disk B+ Tree Milestone 1](https://github.com/ingyu1008/ITE2038/wiki/Project-2-Milestone-1)
