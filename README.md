@@ -34,3 +34,4 @@ Grade: A+
 - 파일 삭제 - "DEL: 삭제한 파일의 내용, 또는 파일의 이름"
 - 오류 수정 - "FIX: 수정된 오류"  
 - 파일 수정 - "UPD: 수정한 내용"  
+[![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fingyu1008%2FITE2038&count_bg=%2379C83D&title_bg=%23555555&icon=imdb.svg&icon_color=%23E7E7E7&title=hits&edge_flat=false)](https://hits.seeyoufarm.com)
